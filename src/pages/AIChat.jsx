@@ -1,81 +1,274 @@
-// Phase 3: Claude API integration
-// This page will be wired up with real AI chat in Phase 3.
+import { useState, useEffect, useRef } from 'react'
 
-const EXAMPLE_PROMPTS = [
-  "What did I struggle with most this month?",
-  "Summarize what I learned last week",
-  "How has my energy level been trending?",
-  "What topics keep showing up in my work?",
-  "What should I focus on tomorrow based on my patterns?",
+// ─── Constants ────────────────────────────────────────────────
+
+const SUGGESTED_PROMPTS = [
+  "What did I struggle with most recently?",
+  "Summarize what I learned this month",
+  "How has my energy been trending?",
+  "What topics keep coming up in my work?",
+  "What should I focus on tomorrow?",
+  "Which days were my most productive?",
 ]
 
-export default function AIChat({ profile, entries }) {
+const ENERGY_LABEL = { green: 'High', yellow: 'Medium', red: 'Low' }
+
+// ─── Sub-components ───────────────────────────────────────────
+
+function Avatar({ role }) {
+  if (role === 'assistant') {
+    return <div style={styles.avatarAssistant}>✦</div>
+  }
+  return null
+}
+
+function TypingIndicator() {
   return (
-    <div className="page-fade">
-      <div style={styles.header}>
-        <h1 style={styles.title}>AI Chat</h1>
-        <p style={styles.sub}>Chat with your logbook — ask questions, spot patterns, get insights.</p>
-      </div>
-
-      <div className="card" style={styles.previewCard}>
-        <div style={styles.comingSoon}>
-          <span style={styles.badge}>Phase 3</span>
-          <h2 style={styles.comingSoonTitle}>AI Chat is coming soon</h2>
-          <p style={styles.comingSoonText}>
-            Once integrated, your AI assistant will have full access to all{' '}
-            <strong style={{ color: 'var(--accent)' }}>{entries.length} entries</strong> in{' '}
-            <em>{profile.logbook_name}</em> and can answer questions like:
-          </p>
-          <div style={styles.prompts}>
-            {EXAMPLE_PROMPTS.map((p, i) => (
-              <div key={i} style={styles.prompt}>
-                <span style={styles.promptIcon}>✦</span>
-                <span>"{p}"</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Mock chat preview */}
-        <div style={styles.chatPreview} aria-hidden>
-          <div style={styles.chatScrim} />
-          <div style={styles.msgAssistant}>
-            <div style={styles.avatar}>✦</div>
-            <div style={styles.bubble}>
-              Hi {profile.name}! I've read through your {entries.length} log {entries.length === 1 ? 'entry' : 'entries'}.
-              What would you like to explore today?
-            </div>
-          </div>
-          <div style={styles.msgUser}>
-            <div style={styles.bubbleUser}>What have I been struggling with most?</div>
-          </div>
-          <div style={styles.msgAssistant}>
-            <div style={styles.avatar}>✦</div>
-            <div style={{ ...styles.bubble, opacity: 0.4 }}>
-              Analysing your entries
-              <span style={styles.blinkDot} />
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.inputRow}>
-          <input
-            className="input"
-            placeholder={`Ask anything about your ${profile.logbook_name}…`}
-            disabled
-            style={{ opacity: 0.4, cursor: 'not-allowed' }}
-          />
-          <button className="btn btn-primary" disabled style={{ flexShrink: 0, opacity: 0.4 }}>
-            Send
-          </button>
-        </div>
+    <div style={styles.msgRow}>
+      <div style={styles.avatarAssistant}>✦</div>
+      <div style={styles.typingBubble}>
+        <span style={{ ...styles.typingDot, animationDelay: '0ms'   }} />
+        <span style={{ ...styles.typingDot, animationDelay: '160ms' }} />
+        <span style={{ ...styles.typingDot, animationDelay: '320ms' }} />
       </div>
     </div>
   )
 }
 
+function Message({ msg }) {
+  const isAssistant = msg.role === 'assistant'
+  return (
+    <div style={{ ...styles.msgRow, ...(isAssistant ? {} : styles.msgRowUser) }}>
+      {isAssistant && <Avatar role="assistant" />}
+      <div style={isAssistant ? styles.bubbleAssistant : styles.bubbleUser}>
+        {msg.content.split('\n').map((line, i) => (
+          <span key={i}>
+            {line}
+            {i < msg.content.split('\n').length - 1 && <br />}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────
+
+export default function AIChat({ profile, entries }) {
+  const [messages, setMessages]   = useState([])   // { role, content }[]
+  const [input, setInput]         = useState('')
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
+  const [started, setStarted]     = useState(false) // hides suggested prompts after first send
+
+  const bottomRef  = useRef(null)
+  const inputRef   = useRef(null)
+  const chatboxRef = useRef(null)
+
+  // Greeting message on mount
+  useEffect(() => {
+    const hour = new Date().getHours()
+    const tod  = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+    const entryWord = entries.length === 1 ? 'entry' : 'entries'
+    setMessages([{
+      role: 'assistant',
+      content: `Good ${tod}, ${profile.name}! I've read through all ${entries.length} ${entryWord} in your ${profile.logbook_name}.\n\nAsk me anything — patterns, blockers, what you've been learning, or how your energy has been trending.`,
+    }])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  // ── Send message ──
+  const send = async (text) => {
+    const userText = (text ?? input).trim()
+    if (!userText || loading) return
+
+    setInput('')
+    setError('')
+    setStarted(true)
+
+    const newMessages = [...messages, { role: 'user', content: userText }]
+    setMessages(newMessages)
+    setLoading(true)
+
+    try {
+      // Build the messages array Claude expects (exclude the greeting from history
+      // since it's synthesised locally — only send real turns)
+      const history = newMessages
+        .slice(1) // drop greeting
+        .map(({ role, content }) => ({ role, content }))
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history, entries, profile }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`)
+
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: data.reply },
+      ])
+    } catch (err) {
+      console.error('[AIChat]', err)
+      setError(err.message?.includes('ANTHROPIC_API_KEY')
+        ? 'The AI function is not deployed yet. Follow the setup steps below.'
+        : err.message || 'Something went wrong. Please try again.'
+      )
+      // Remove the user message so they can retry
+      setMessages((prev) => prev.slice(0, -1))
+      setStarted(messages.length > 1)
+    } finally {
+      setLoading(false)
+      inputRef.current?.focus()
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      send()
+    }
+  }
+
+  const handleClear = () => {
+    const hour = new Date().getHours()
+    const tod  = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+    const entryWord = entries.length === 1 ? 'entry' : 'entries'
+    setMessages([{
+      role: 'assistant',
+      content: `Good ${tod}, ${profile.name}! I've read through all ${entries.length} ${entryWord} in your ${profile.logbook_name}.\n\nAsk me anything — patterns, blockers, what you've been learning, or how your energy has been trending.`,
+    }])
+    setStarted(false)
+    setError('')
+    setInput('')
+  }
+
+  const hasEntries = entries.length > 0
+
+  return (
+    <div className="page-fade" style={styles.root}>
+      {/* ── Header ── */}
+      <div style={styles.header}>
+        <div>
+          <h1 style={styles.title}>AI Chat</h1>
+          <p style={styles.sub}>
+            {hasEntries
+              ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} loaded as context`
+              : 'Log some entries first to unlock full insights'}
+          </p>
+        </div>
+        {messages.length > 1 && (
+          <button className="btn btn-secondary" onClick={handleClear} style={{ fontSize: '13px' }}>
+            ↺ New conversation
+          </button>
+        )}
+      </div>
+
+      {/* ── Chat window ── */}
+      <div style={styles.chatCard}>
+        {/* Messages */}
+        <div style={styles.messages} ref={chatboxRef}>
+          {messages.map((msg, i) => (
+            <Message key={i} msg={msg} />
+          ))}
+          {loading && <TypingIndicator />}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Suggested prompts — shown before first real send */}
+        {!started && hasEntries && (
+          <div style={styles.suggestions}>
+            <p style={styles.suggestionsLabel}>Suggested questions</p>
+            <div style={styles.chips}>
+              {SUGGESTED_PROMPTS.map((p, i) => (
+                <button
+                  key={i}
+                  className="btn"
+                  style={styles.chip}
+                  onClick={() => send(p)}
+                  disabled={loading}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* No entries warning */}
+        {!hasEntries && (
+          <div style={styles.noEntries}>
+            <span style={styles.noEntriesIcon}>📝</span>
+            <p>Log at least one work day first — the AI needs your entries to give meaningful answers.</p>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div style={styles.errorBanner}>
+            <span>⚠</span> {error}
+          </div>
+        )}
+
+        {/* Input row */}
+        <div style={styles.inputRow}>
+          <textarea
+            ref={inputRef}
+            className="input"
+            style={styles.textarea}
+            placeholder={hasEntries
+              ? `Ask anything about your ${profile.logbook_name}…`
+              : 'Log some entries first…'}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={1}
+            disabled={loading || !hasEntries}
+          />
+          <button
+            className="btn btn-primary"
+            style={{ flexShrink: 0, alignSelf: 'flex-end', height: '40px', minWidth: '72px' }}
+            onClick={() => send()}
+            disabled={loading || !input.trim() || !hasEntries}
+          >
+            {loading
+              ? <div className="spinner" style={{ borderTopColor: '#0f0f13', width: '16px', height: '16px' }} />
+              : 'Send'
+            }
+          </button>
+        </div>
+
+        <p style={styles.hint}>
+          Press <kbd style={styles.kbd}>Enter</kbd> to send · <kbd style={styles.kbd}>Shift+Enter</kbd> for new line
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Styles ───────────────────────────────────────────────────
+
 const styles = {
-  header: { marginBottom: '28px' },
+  root: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: 'calc(100vh - 80px)',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginBottom: '20px',
+    gap: '16px',
+    flexWrap: 'wrap',
+    flexShrink: 0,
+  },
   title: {
     fontFamily: 'var(--font-heading)',
     fontSize: '30px',
@@ -85,114 +278,175 @@ const styles = {
     marginBottom: '4px',
   },
   sub: { fontSize: '14px', color: 'var(--text-secondary)' },
-  previewCard: { padding: 0, overflow: 'hidden' },
-  comingSoon: {
-    padding: '32px 32px 28px',
-    borderBottom: '1px solid var(--border)',
-  },
-  badge: {
-    display: 'inline-block',
-    background: 'var(--accent-dim)',
-    color: 'var(--accent)',
-    border: '1px solid rgba(240, 192, 96, 0.2)',
-    borderRadius: '99px',
-    padding: '3px 12px',
-    fontSize: '11px',
-    fontWeight: 500,
-    letterSpacing: '0.05em',
-    textTransform: 'uppercase',
-    marginBottom: '16px',
-  },
-  comingSoonTitle: {
-    fontFamily: 'var(--font-heading)',
-    fontSize: '22px',
-    fontWeight: 600,
-    color: 'var(--text-primary)',
-    marginBottom: '10px',
-    letterSpacing: '-0.01em',
-  },
-  comingSoonText: {
-    fontSize: '14px',
-    color: 'var(--text-secondary)',
-    lineHeight: 1.7,
-    marginBottom: '20px',
-  },
-  prompts: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  prompt: {
+
+  chatCard: {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-lg)',
     display: 'flex',
-    alignItems: 'flex-start',
-    gap: '10px',
-    fontSize: '13px',
-    color: 'var(--text-secondary)',
-    lineHeight: 1.5,
+    flexDirection: 'column',
+    flex: 1,
+    overflow: 'hidden',
   },
-  promptIcon: { color: 'var(--accent)', flexShrink: 0, marginTop: '1px', opacity: 0.7 },
-  chatPreview: {
-    padding: '24px 28px',
+
+  messages: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '24px 24px 8px',
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
-    position: 'relative',
-    opacity: 0.65,
-    pointerEvents: 'none',
   },
-  chatScrim: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '60px',
-    background: 'linear-gradient(to top, var(--bg-card), transparent)',
-    zIndex: 1,
+
+  msgRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    animation: 'fadeIn 0.2s ease both',
   },
-  msgAssistant: { display: 'flex', alignItems: 'flex-start', gap: '10px' },
-  avatar: {
-    width: '28px',
-    height: '28px',
+  msgRowUser: {
+    justifyContent: 'flex-end',
+  },
+
+  avatarAssistant: {
+    width: '30px',
+    height: '30px',
     borderRadius: '50%',
     background: 'var(--accent-dim)',
-    border: '1px solid rgba(240, 192, 96, 0.2)',
+    border: '1px solid rgba(240, 192, 96, 0.25)',
     color: 'var(--accent)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '12px',
     flexShrink: 0,
+    marginTop: '2px',
   },
-  bubble: {
+
+  bubbleAssistant: {
     background: 'var(--bg-elevated)',
     border: '1px solid var(--border)',
     borderRadius: '0 var(--radius) var(--radius) var(--radius)',
-    padding: '10px 14px',
-    fontSize: '13px',
+    padding: '12px 16px',
+    fontSize: '14px',
     color: 'var(--text-primary)',
-    maxWidth: '80%',
-    lineHeight: 1.6,
+    maxWidth: '78%',
+    lineHeight: 1.7,
   },
-  msgUser: { display: 'flex', justifyContent: 'flex-end' },
   bubbleUser: {
     background: 'var(--accent-dim)',
-    border: '1px solid rgba(240, 192, 96, 0.15)',
+    border: '1px solid rgba(240, 192, 96, 0.18)',
     borderRadius: 'var(--radius) 0 var(--radius) var(--radius)',
-    padding: '10px 14px',
-    fontSize: '13px',
+    padding: '12px 16px',
+    fontSize: '14px',
     color: 'var(--text-primary)',
-    maxWidth: '80%',
-    lineHeight: 1.6,
+    maxWidth: '78%',
+    lineHeight: 1.7,
   },
-  blinkDot: {
+
+  typingBubble: {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    borderRadius: '0 var(--radius) var(--radius) var(--radius)',
+    padding: '14px 18px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+  },
+  typingDot: {
     display: 'inline-block',
-    width: '6px',
-    height: '6px',
+    width: '7px',
+    height: '7px',
     borderRadius: '50%',
     background: 'var(--text-muted)',
-    marginLeft: '6px',
-    animation: 'pulse 1.2s ease infinite',
+    animation: 'pulse 1.1s ease infinite',
   },
+
+  suggestions: {
+    padding: '0 24px 16px',
+    flexShrink: 0,
+  },
+  suggestionsLabel: {
+    fontSize: '11px',
+    fontWeight: 500,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    color: 'var(--text-muted)',
+    marginBottom: '10px',
+  },
+  chips: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+  },
+  chip: {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    borderRadius: '99px',
+    color: 'var(--text-secondary)',
+    fontSize: '12px',
+    padding: '6px 14px',
+    cursor: 'pointer',
+    transition: 'all var(--t-fast)',
+    fontFamily: 'var(--font-body)',
+  },
+
+  noEntries: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    margin: '0 24px 16px',
+    padding: '12px 16px',
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-sm)',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+  },
+  noEntriesIcon: { fontSize: '20px', flexShrink: 0 },
+
+  errorBanner: {
+    margin: '0 24px 12px',
+    padding: '10px 14px',
+    background: 'var(--red-dim)',
+    border: '1px solid rgba(248, 113, 113, 0.2)',
+    borderRadius: 'var(--radius-sm)',
+    color: 'var(--red)',
+    fontSize: '13px',
+    display: 'flex',
+    gap: '8px',
+    flexShrink: 0,
+  },
+
   inputRow: {
     display: 'flex',
     gap: '10px',
-    padding: '16px 24px',
+    padding: '12px 24px 8px',
     borderTop: '1px solid var(--border)',
+    flexShrink: 0,
+    alignItems: 'flex-end',
+  },
+  textarea: {
+    resize: 'none',
+    lineHeight: 1.6,
+    padding: '10px 14px',
+    maxHeight: '120px',
+    overflowY: 'auto',
+  },
+  hint: {
+    fontSize: '11px',
+    color: 'var(--text-muted)',
+    padding: '0 24px 14px',
+    flexShrink: 0,
+  },
+  kbd: {
+    display: 'inline-block',
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    borderRadius: '4px',
+    padding: '1px 5px',
+    fontSize: '10px',
+    fontFamily: 'var(--font-body)',
+    color: 'var(--text-muted)',
   },
 }
