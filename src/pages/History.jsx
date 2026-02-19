@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { generatePDF } from '../lib/generatePDF'
 
 const ENERGY_COLOR = { green: '#4ade80', yellow: '#facc15', red: '#f87171' }
 const ENERGY_LABEL = { green: 'High', yellow: 'Medium', red: 'Low' }
@@ -16,7 +17,7 @@ function truncate(str, n = 120) {
   return str.slice(0, n).trimEnd() + '…'
 }
 
-function EntryCard({ entry, onDelete }) {
+function EntryCard({ entry, onDelete, profile }) {
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -60,9 +61,9 @@ function EntryCard({ entry, onDelete }) {
         <div style={styles.cardActions}>
           <button
             className="btn btn-ghost"
-            style={{ fontSize: '12px', opacity: 0.4, cursor: 'not-allowed' }}
-            title="PDF download coming in Phase 2"
-            disabled
+            style={{ fontSize: '12px' }}
+            title="Download PDF for this entry"
+            onClick={() => generatePDF(entry, profile)}
           >
             ↓ PDF
           </button>
@@ -178,7 +179,7 @@ export default function History({ profile, entries, entriesLoading, deleteEntry,
       ) : (
         <div style={styles.list}>
           {entries.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} onDelete={deleteEntry} />
+            <EntryCard key={entry.id} entry={entry} onDelete={deleteEntry} profile={profile} />
           ))}
         </div>
       )}

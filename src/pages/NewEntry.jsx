@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { generatePDF } from '../lib/generatePDF'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -86,7 +87,7 @@ export default function NewEntry({ profile, addEntry, setPage }) {
         tomorrow: form.tomorrow.trim(),
       })
       setSavedEntry(entry)
-      // TODO (Phase 2): generatePDF(entry, profile)
+      generatePDF(entry, profile)
     } catch (err) {
       setErrors({ submit: err.message || 'Failed to save entry. Please try again.' })
     } finally {
@@ -113,8 +114,8 @@ export default function NewEntry({ profile, addEntry, setPage }) {
               })} has been saved.
             </p>
             <div style={styles.pdfNote}>
-              <span style={{ color: 'var(--accent)', marginRight: '6px' }}>✦</span>
-              PDF download coming in Phase 2 — check your History to view this entry.
+              <span style={{ color: 'var(--green)', marginRight: '6px' }}>✓</span>
+              Your PDF has been downloaded automatically.
             </div>
             <div style={styles.successActions}>
               <button className="btn btn-secondary" onClick={handleClear}>Log another day</button>
@@ -274,8 +275,8 @@ const styles = {
     marginBottom: '20px',
   },
   pdfNote: {
-    background: 'var(--accent-dim)',
-    border: '1px solid rgba(240, 192, 96, 0.15)',
+    background: 'var(--green-dim)',
+    border: '1px solid rgba(74, 222, 128, 0.2)',
     borderRadius: 'var(--radius-sm)',
     padding: '10px 14px',
     fontSize: '13px',
