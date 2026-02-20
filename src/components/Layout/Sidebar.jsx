@@ -1,11 +1,41 @@
-const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: '◈' },
-  { id: 'new-entry', label: 'New Entry',  icon: '+' },
-  { id: 'history',   label: 'History',   icon: '≡' },
-  { id: 'ai-chat',   label: 'AI Chat',   icon: '✦' },
-]
+import { useState } from 'react'
+import { supabase } from '../../lib/supabase'
 
 export default function Sidebar({ page, setPage, profile, signOut }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting]                   = useState(false)
+  const [deleteError, setDeleteError]             = useState('')
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res  = await fetch('/api/delete-account', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Deletion failed.')
+      // Account deleted — sign out and reload
+      await supabase.auth.signOut()
+      window.location.reload()
+    } catch (err) {
+      setDeleteError(err.message)
+      setDeleting(false)
+    }
+  }
+
+  const NAV_ITEMS = [
+    { id: 'dashboard', label: 'Dashboard', icon: '◈' },
+    { id: 'new-entry', label: 'New Entry',  icon: '+' },
+    { id: 'history',   label: 'History',   icon: '≡' },
+    { id: 'ai-chat',   label: 'AI Chat',   icon: '✦' },
+  ]
+
   return (
     <aside style={styles.sidebar}>
       {/* Logo */}
@@ -66,6 +96,56 @@ export default function Sidebar({ page, setPage, profile, signOut }) {
         >
           <span>↩</span> Sign out
         </button>
+
+        {/* Privacy policy link */}
+        <a
+          href="/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={styles.privacyLink}
+        >
+          Privacy Policy
+        </a>
+
+        {/* Delete account */}
+        {!showDeleteConfirm ? (
+          <button
+            className="btn btn-ghost"
+            onClick={() => setShowDeleteConfirm(true)}
+            style={{ width: '100%', justifyContent: 'flex-start', fontSize: '12px', color: 'var(--text-muted)', opacity: 0.7 }}
+          >
+            Delete account
+          </button>
+        ) : (
+          <div style={styles.deleteConfirm}>
+            <p style={styles.deleteWarning}>
+              This permanently deletes all your entries, profile, and cancels any active subscription. This cannot be undone.
+            </p>
+            {deleteError && (
+              <p style={{ fontSize: '11px', color: 'var(--red)', marginBottom: '8px' }}>⚠ {deleteError}</p>
+            )}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                className="btn btn-danger"
+                style={{ flex: 1, fontSize: '12px', padding: '6px 0' }}
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+              >
+                {deleting
+                  ? <div className="spinner" style={{ width: '12px', height: '12px', borderTopColor: 'var(--red)' }} />
+                  : 'Yes, delete'}
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1, fontSize: '12px', padding: '6px 0' }}
+                onClick={() => { setShowDeleteConfirm(false); setDeleteError('') }}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   )
@@ -207,5 +287,26 @@ const styles = {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+  },
+  privacyLink: {
+    fontSize: '12px',
+    color: 'var(--text-muted)',
+    textDecoration: 'none',
+    padding: '4px 12px',
+    opacity: 0.7,
+    transition: 'opacity 0.15s',
+  },
+  deleteConfirm: {
+    background: 'var(--bg)',
+    border: '1px solid rgba(248, 113, 113, 0.2)',
+    borderRadius: 'var(--radius-sm)',
+    padding: '10px',
+    marginTop: '4px',
+  },
+  deleteWarning: {
+    fontSize: '11px',
+    color: 'var(--text-secondary)',
+    lineHeight: 1.5,
+    marginBottom: '10px',
   },
 }
