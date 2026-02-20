@@ -150,6 +150,12 @@ body {
 
 /* ─── Sidebar (desktop only) ─────────────────────────────── */
 
+/* Show logbook delete btn on row hover */
+.lb-row:hover .lb-delete-btn,
+.lb-row:focus-within .lb-delete-btn {
+  opacity: 1 !important;
+}
+
 .sidebar {
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
@@ -189,6 +195,22 @@ body {
   color: var(--accent);
   letter-spacing: -0.01em;
   white-space: nowrap;
+}
+
+.mobile-header-lb-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  max-width: 180px;
 }
 
 /* ─── Mobile nav bar ─────────────────────────────────────── */

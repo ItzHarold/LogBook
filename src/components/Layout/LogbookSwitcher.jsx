@@ -117,15 +117,13 @@ export default function LogbookSwitcher({
                       {lb.organization && <div style={styles.lbOrg}>{lb.organization}</div>}
                     </div>
                   </button>
-                  {logbooks.length > 1 && (
-                    <button
-                      style={styles.deleteIconBtn}
-                      onClick={() => { setDeleteTarget(lb); setView('delete') }}
-                      title="Delete this logbook"
-                    >
-                      🗑
-                    </button>
-                  )}
+                  <button
+                    style={styles.deleteIconBtn}
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(lb); setView('delete') }}
+                    title="Delete this logbook"
+                  >
+                    🗑
+                  </button>
                 </div>
               ))}
 

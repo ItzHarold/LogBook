@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import LogbookSwitcher from './LogbookSwitcher'
 import ProfilePanel from './ProfilePanel'
+import LogbookModal from '../Logbooks/LogbookModal'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '◈' },
@@ -13,7 +13,8 @@ export default function Sidebar({
   page, setPage, profile, signOut,
   logbooks, activeLogbook, setActiveLogbookId, addLogbook, deleteLogbook,
 }) {
-  const [profileOpen, setProfileOpen] = useState(false)
+  const [profileOpen, setProfileOpen]   = useState(false)
+  const [modal, setModal]               = useState(null) // null | { mode: 'create' } | { mode: 'delete', target }
 
   return (
     <>
@@ -24,16 +25,56 @@ export default function Sidebar({
           <span style={styles.logoName}>LogBook</span>
         </div>
 
-        {/* Logbook switcher */}
-        <div style={styles.switcherWrap}>
-          <LogbookSwitcher
-            logbooks={logbooks}
-            activeLogbook={activeLogbook}
-            setActiveLogbookId={setActiveLogbookId}
-            addLogbook={addLogbook}
-            deleteLogbook={deleteLogbook}
-          />
+        {/* Logbooks section */}
+        <div style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.sectionLabel}>Your logbooks</span>
+          </div>
+
+          {logbooks.map((lb) => {
+            const isActive = lb.id === activeLogbook?.id
+            return (
+              <div
+                key={lb.id}
+                className="lb-row"
+                style={{ ...styles.lbRow, ...(isActive ? styles.lbRowActive : {}) }}
+              >
+                <button
+                  style={styles.lbBtn}
+                  onClick={() => setActiveLogbookId(lb.id)}
+                >
+                  <span style={styles.lbCheck}>{isActive ? '✓' : '○'}</span>
+                  <div style={styles.lbInfo}>
+                    <div style={{ ...styles.lbName, ...(isActive ? styles.lbNameActive : {}) }}>
+                      {lb.name}
+                    </div>
+                    {lb.organization && (
+                      <div style={styles.lbOrg}>{lb.organization}</div>
+                    )}
+                  </div>
+                </button>
+                <button
+                  className="lb-delete-btn"
+                  style={styles.lbDeleteBtn}
+                  onClick={() => setModal({ mode: 'delete', target: lb })}
+                  title="Delete logbook"
+                >
+                  ✕
+                </button>
+              </div>
+            )
+          })}
+
+          <button
+            style={styles.newLbBtn}
+            onClick={() => setModal({ mode: 'create' })}
+          >
+            <span style={styles.newLbIcon}>+</span>
+            New logbook
+          </button>
         </div>
+
+        <div style={styles.divider} />
 
         {/* Navigation */}
         <nav style={styles.nav}>
@@ -43,10 +84,7 @@ export default function Sidebar({
               <button
                 key={item.id}
                 onClick={() => setPage(item.id)}
-                style={{
-                  ...styles.navItem,
-                  ...(isActive ? styles.navItemActive : {}),
-                }}
+                style={{ ...styles.navItem, ...(isActive ? styles.navItemActive : {}) }}
               >
                 <span style={{
                   ...styles.navIcon,
@@ -61,7 +99,7 @@ export default function Sidebar({
           })}
         </nav>
 
-        {/* Footer — clickable user chip */}
+        {/* Footer */}
         <div style={styles.footer}>
           <button
             style={styles.userChip}
@@ -73,7 +111,7 @@ export default function Sidebar({
             </div>
             <div style={styles.userInfo}>
               <div style={styles.userName}>{profile.name}</div>
-              <div style={styles.userOrg} title={activeLogbook?.organization}>
+              <div style={styles.userOrg}>
                 {activeLogbook?.organization || profile.organization}
               </div>
             </div>
@@ -82,7 +120,17 @@ export default function Sidebar({
         </div>
       </aside>
 
-      {/* Profile panel (portal-style overlay) */}
+      {/* Modals */}
+      {modal && (
+        <LogbookModal
+          mode={modal.mode}
+          target={modal.target}
+          addLogbook={addLogbook}
+          deleteLogbook={deleteLogbook}
+          onClose={() => setModal(null)}
+        />
+      )}
+
       {profileOpen && (
         <ProfilePanel
           profile={profile}
@@ -101,7 +149,7 @@ const styles = {
     gap: '9px',
     padding: '8px 10px 16px',
     borderBottom: '1px solid var(--border)',
-    marginBottom: '12px',
+    marginBottom: '14px',
   },
   logoIcon: { fontSize: '20px', flexShrink: 0 },
   logoName: {
@@ -110,9 +158,113 @@ const styles = {
     color: 'var(--accent)',
     letterSpacing: '-0.01em',
   },
-  switcherWrap: {
-    marginBottom: '12px',
-    padding: '0 2px',
+  section: { marginBottom: '4px' },
+  sectionHeader: {
+    padding: '0 12px 6px',
+  },
+  sectionLabel: {
+    fontSize: '10px',
+    fontWeight: 600,
+    letterSpacing: '0.07em',
+    textTransform: 'uppercase',
+    color: 'var(--text-muted)',
+  },
+  lbRow: {
+    display: 'flex',
+    alignItems: 'center',
+    borderRadius: 'var(--radius-sm)',
+    marginBottom: '1px',
+    transition: 'background var(--t-fast)',
+  },
+  lbRowActive: { background: 'var(--accent-dim)' },
+  lbBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flex: 1,
+    padding: '7px 10px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontFamily: 'var(--font-body)',
+    textAlign: 'left',
+    borderRadius: 'var(--radius-sm)',
+    minWidth: 0,
+  },
+  lbCheck: {
+    fontSize: '11px',
+    color: 'var(--accent)',
+    width: '12px',
+    flexShrink: 0,
+    textAlign: 'center',
+  },
+  lbInfo: { flex: 1, overflow: 'hidden' },
+  lbName: {
+    fontSize: '13px',
+    fontWeight: 400,
+    color: 'var(--text-secondary)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  lbNameActive: {
+    color: 'var(--accent)',
+    fontWeight: 500,
+  },
+  lbOrg: {
+    fontSize: '11px',
+    color: 'var(--text-muted)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  lbDeleteBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--text-muted)',
+    cursor: 'pointer',
+    padding: '6px 8px',
+    fontSize: '10px',
+    opacity: 0,
+    flexShrink: 0,
+    fontFamily: 'var(--font-body)',
+    borderRadius: 'var(--radius-sm)',
+    transition: 'opacity var(--t-fast)',
+    // shown on hover via CSS class below
+  },
+  newLbBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    width: '100%',
+    padding: '7px 10px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontFamily: 'var(--font-body)',
+    fontSize: '12px',
+    color: 'var(--text-muted)',
+    borderRadius: 'var(--radius-sm)',
+    marginTop: '2px',
+    transition: 'color var(--t-fast)',
+  },
+  newLbIcon: {
+    width: '16px',
+    height: '16px',
+    borderRadius: '4px',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '13px',
+    color: 'var(--text-muted)',
+    lineHeight: 1,
+  },
+  divider: {
+    height: '1px',
+    background: 'var(--border)',
+    margin: '10px 0',
   },
   nav: {
     display: 'flex',
@@ -157,7 +309,7 @@ const styles = {
     borderRadius: '6px',
     fontSize: '18px',
     fontWeight: 300,
-    border: '1px solid rgba(240, 192, 96, 0.2)',
+    border: '1px solid rgba(240,192,96,0.2)',
   },
   navLabel: { flex: 1 },
   activePip: {
@@ -190,7 +342,7 @@ const styles = {
     height: '30px',
     borderRadius: '50%',
     background: 'var(--accent-dim)',
-    border: '1px solid rgba(240, 192, 96, 0.25)',
+    border: '1px solid rgba(240,192,96,0.25)',
     color: 'var(--accent)',
     display: 'flex',
     alignItems: 'center',
