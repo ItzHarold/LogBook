@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { generatePDF } from '../lib/generatePDF'
+import GDriveConnect from '../components/GDrive/GDriveConnect'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -48,11 +49,12 @@ function TextArea({ id, value, onChange, placeholder, rows = 4 }) {
   )
 }
 
-export default function NewEntry({ profile, addEntry, setPage }) {
-  const [form, setForm] = useState(BLANK_FORM(profile))
-  const [errors, setErrors] = useState({})
-  const [saving, setSaving] = useState(false)
+export default function NewEntry({ profile, addEntry, setPage, gDrive }) {
+  const [form, setForm]           = useState(BLANK_FORM(profile))
+  const [errors, setErrors]       = useState({})
+  const [saving, setSaving]       = useState(false)
   const [savedEntry, setSavedEntry] = useState(null)
+  const [oneDriveSuccess, setOneDriveSuccess] = useState('')
 
   const set = (field) => (e) => {
     setForm((f) => ({ ...f, [field]: e.target.value }))
@@ -76,15 +78,15 @@ export default function NewEntry({ profile, addEntry, setPage }) {
     setSaving(true)
     try {
       const entry = await addEntry({
-        date: form.date,
-        hours: parseFloat(form.hours),
-        energy: form.energy,
-        location: form.location.trim(),
+        date:      form.date,
+        hours:     parseFloat(form.hours),
+        energy:    form.energy,
+        location:  form.location.trim(),
         worked_on: form.worked_on.trim(),
-        learned: form.learned.trim(),
-        blockers: form.blockers.trim(),
-        ideas: form.ideas.trim(),
-        tomorrow: form.tomorrow.trim(),
+        learned:   form.learned.trim(),
+        blockers:  form.blockers.trim(),
+        ideas:     form.ideas.trim(),
+        tomorrow:  form.tomorrow.trim(),
       })
       setSavedEntry(entry)
       generatePDF(entry, profile)
@@ -95,10 +97,20 @@ export default function NewEntry({ profile, addEntry, setPage }) {
     }
   }
 
+  const handleSaveToGDrive = async () => {
+    if (!savedEntry) return
+    gDrive.clearUploadError()
+    setOneDriveSuccess('')
+    const ok = await gDrive.uploadPDF(savedEntry, profile)
+    if (ok) setOneDriveSuccess('Saved to your Google Drive LogBook folder ✓')
+  }
+
   const handleClear = () => {
     setForm(BLANK_FORM(profile))
     setErrors({})
     setSavedEntry(null)
+    setOneDriveSuccess('')
+    gDrive.clearUploadError?.()
   }
 
   if (savedEntry) {
@@ -113,10 +125,58 @@ export default function NewEntry({ profile, addEntry, setPage }) {
                 weekday: 'long', month: 'long', day: 'numeric'
               })} has been saved.
             </p>
+
+            {/* PDF downloaded banner */}
             <div style={styles.pdfNote}>
               <span style={{ color: 'var(--green)', marginRight: '6px' }}>✓</span>
-              Your PDF has been downloaded automatically.
+              PDF downloaded automatically.
             </div>
+
+            {/* OneDrive section */}
+            <div style={styles.oneDriveSection}>
+              <p style={styles.oneDriveLabel}>Save to OneDrive</p>
+
+              {!gDrive.isConnected ? (
+                <div style={styles.oneDrivePrompt}>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                    Connect your Google Drive to automatically save PDFs to a LogBook folder.
+                  </p>
+                  <GDriveConnect
+                    isConnected={false}
+                    connect={gDrive.connect}
+                    disconnect={gDrive.disconnect}
+                  />
+                </div>
+              ) : oneDriveSuccess ? (
+                <div style={styles.oneDriveSuccessBanner}>
+                  <span>☁</span> {oneDriveSuccess}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ width: '100%' }}
+                    onClick={handleSaveToGDrive}
+                    disabled={gDrive.uploading}
+                  >
+                    {gDrive.uploading
+                      ? <><div className="spinner" style={{ borderTopColor: 'var(--text-primary)' }} /> Uploading…</>
+                      : '☁ Save to Google Drive'}
+                  </button>
+                  {gDrive.uploadError && (
+                    <p style={{ fontSize: '12px', color: 'var(--red)' }}>⚠ {gDrive.uploadError}</p>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <GDriveConnect
+                      isConnected
+                      connect={gDrive.connect}
+                      disconnect={gDrive.disconnect}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div style={styles.successActions}>
               <button className="btn btn-secondary" onClick={handleClear}>Log another day</button>
               <button className="btn btn-primary" onClick={() => setPage('history')}>View history →</button>
@@ -244,9 +304,9 @@ const styles = {
     display: 'flex',
     alignItems: 'flex-start',
     justifyContent: 'center',
-    paddingTop: '60px',
+    paddingTop: '40px',
   },
-  successCard: { maxWidth: '440px', width: '100%', textAlign: 'center', padding: '48px 40px' },
+  successCard: { maxWidth: '460px', width: '100%', textAlign: 'center', padding: '40px 36px' },
   successIcon: {
     width: '52px',
     height: '52px',
@@ -272,17 +332,44 @@ const styles = {
     fontSize: '14px',
     color: 'var(--text-secondary)',
     lineHeight: 1.6,
-    marginBottom: '20px',
+    marginBottom: '16px',
   },
   pdfNote: {
     background: 'var(--green-dim)',
     border: '1px solid rgba(74, 222, 128, 0.2)',
     borderRadius: 'var(--radius-sm)',
-    padding: '10px 14px',
+    padding: '8px 14px',
     fontSize: '13px',
     color: 'var(--text-secondary)',
-    marginBottom: '28px',
+    marginBottom: '16px',
     textAlign: 'left',
+  },
+  oneDriveSection: {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    padding: '16px',
+    marginBottom: '24px',
+    textAlign: 'left',
+  },
+  oneDriveLabel: {
+    fontSize: '11px',
+    fontWeight: 500,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    color: 'var(--text-muted)',
+    marginBottom: '10px',
+  },
+  oneDrivePrompt: { display: 'flex', flexDirection: 'column' },
+  oneDriveSuccessBanner: {
+    background: 'rgba(74, 222, 128, 0.08)',
+    border: '1px solid rgba(74, 222, 128, 0.2)',
+    borderRadius: 'var(--radius-sm)',
+    padding: '10px 14px',
+    fontSize: '13px',
+    color: 'var(--green)',
+    display: 'flex',
+    gap: '8px',
   },
   successActions: { display: 'flex', gap: '12px', justifyContent: 'center' },
 }

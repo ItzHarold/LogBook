@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { generatePDF } from '../lib/generatePDF'
+import GDriveConnect from '../components/GDrive/GDriveConnect'
 
 const ENERGY_COLOR = { green: '#4ade80', yellow: '#facc15', red: '#f87171' }
 const ENERGY_LABEL = { green: 'High', yellow: 'Medium', red: 'Low' }
@@ -17,9 +18,11 @@ function truncate(str, n = 120) {
   return str.slice(0, n).trimEnd() + '…'
 }
 
-function EntryCard({ entry, onDelete, profile }) {
-  const [deleting, setDeleting] = useState(false)
+function EntryCard({ entry, onDelete, profile, gDrive }) {
+  const [deleting, setDeleting]         = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState('') // '' | 'uploading' | 'done' | 'error'
+  const [uploadMsg, setUploadMsg]       = useState('')
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -29,6 +32,19 @@ function EntryCard({ entry, onDelete, profile }) {
       console.error('Delete failed:', err)
       setDeleting(false)
       setConfirmDelete(false)
+    }
+  }
+
+  const handleGDrive = async () => {
+    setUploadStatus('uploading')
+    setUploadMsg('')
+    const ok = await gDrive.uploadPDF(entry, profile)
+    if (ok) {
+      setUploadStatus('done')
+      setUploadMsg('Saved to OneDrive ✓')
+    } else {
+      setUploadStatus('error')
+      setUploadMsg(gDrive.uploadError || 'Upload failed')
     }
   }
 
@@ -59,15 +75,36 @@ function EntryCard({ entry, onDelete, profile }) {
         </div>
 
         <div style={styles.cardActions}>
+          {/* Download PDF */}
           <button
             className="btn btn-ghost"
             style={{ fontSize: '12px' }}
-            title="Download PDF for this entry"
+            title="Download PDF"
             onClick={() => generatePDF(entry, profile)}
           >
             ↓ PDF
           </button>
 
+          {/* Save to Google Drive */}
+          {gDrive.isConnected && (
+            <button
+              className="btn btn-ghost"
+              style={{
+                fontSize: '12px',
+                color: uploadStatus === 'done' ? 'var(--green)' : 'var(--text-secondary)',
+                opacity: uploadStatus === 'uploading' ? 0.6 : 1,
+              }}
+              title={uploadStatus === 'done' ? uploadMsg : 'Save to Google Drive'}
+              onClick={handleGDrive}
+              disabled={uploadStatus === 'uploading' || uploadStatus === 'done'}
+            >
+              {uploadStatus === 'uploading'
+                ? <div className="spinner" style={{ width: '10px', height: '10px', borderTopColor: 'currentColor' }} />
+                : uploadStatus === 'done' ? '☁ Saved' : '☁ Drive'}
+            </button>
+          )}
+
+          {/* Delete */}
           {!confirmDelete ? (
             <button
               className="btn btn-ghost"
@@ -124,6 +161,10 @@ function EntryCard({ entry, onDelete, profile }) {
         </div>
       )}
 
+      {uploadStatus === 'error' && (
+        <div style={styles.uploadError}>⚠ {uploadMsg}</div>
+      )}
+
       <div style={{
         ...styles.energyChip,
         background: ENERGY_DIM[entry.energy],
@@ -138,7 +179,7 @@ function EntryCard({ entry, onDelete, profile }) {
   )
 }
 
-export default function History({ profile, entries, entriesLoading, deleteEntry, setPage }) {
+export default function History({ profile, entries, entriesLoading, deleteEntry, setPage, gDrive }) {
   if (entriesLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '80px' }}>
@@ -158,11 +199,19 @@ export default function History({ profile, entries, entriesLoading, deleteEntry,
               : profile.logbook_name}
           </p>
         </div>
-        {entries.length > 0 && (
-          <button className="btn btn-primary" onClick={() => setPage('new-entry')}>
-            + New Entry
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* OneDrive connect toggle in the header */}
+          <GDriveConnect
+            isConnected={gDrive.isConnected}
+            connect={gDrive.connect}
+            disconnect={gDrive.disconnect}
+          />
+          {entries.length > 0 && (
+            <button className="btn btn-primary" onClick={() => setPage('new-entry')}>
+              + New Entry
+            </button>
+          )}
+        </div>
       </div>
 
       {entries.length === 0 ? (
@@ -179,7 +228,13 @@ export default function History({ profile, entries, entriesLoading, deleteEntry,
       ) : (
         <div style={styles.list}>
           {entries.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} onDelete={deleteEntry} profile={profile} />
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              onDelete={deleteEntry}
+              profile={profile}
+              gDrive={gDrive}
+            />
           ))}
         </div>
       )}
@@ -238,7 +293,7 @@ const styles = {
     flexWrap: 'wrap',
   },
   sep: { color: 'var(--text-muted)' },
-  cardActions: { display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 },
+  cardActions: { display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'wrap' },
   deleteConfirm: { display: 'flex', alignItems: 'center', gap: '6px' },
   cardBody: {
     marginTop: '14px',
@@ -256,6 +311,11 @@ const styles = {
     paddingTop: '1px',
   },
   previewText: { color: 'var(--text-secondary)', lineHeight: 1.6, flex: 1 },
+  uploadError: {
+    marginTop: '8px',
+    fontSize: '12px',
+    color: 'var(--red)',
+  },
   energyChip: {
     display: 'inline-flex',
     alignItems: 'center',

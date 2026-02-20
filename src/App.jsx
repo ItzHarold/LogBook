@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { supabase } from './lib/supabase'
 import { useAuth } from './hooks/useAuth'
 import { useProfile } from './hooks/useProfile'
 import { useEntries } from './hooks/useEntries'
+import { useGDrive } from './hooks/useGDrive'
 
 import AuthPage from './components/Auth/AuthPage'
 import Onboarding from './components/Onboarding/Onboarding'
@@ -10,8 +12,6 @@ import Dashboard from './pages/Dashboard'
 import NewEntry from './pages/NewEntry'
 import History from './pages/History'
 import AIChat from './pages/AIChat'
-
-// ─── Loading screen ───────────────────────────────────────────
 
 function LoadingScreen() {
   return (
@@ -37,31 +37,54 @@ function LoadingScreen() {
   )
 }
 
-// ─── Root ─────────────────────────────────────────────────────
-
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth()
   const { profile, loading: profileLoading, saveProfile, refreshProfile } = useProfile(user?.id)
   const { entries, loading: entriesLoading, addEntry, deleteEntry } = useEntries(user?.id)
+  const gDrive = useGDrive(profile, refreshProfile)
 
   const [page, setPage] = useState('dashboard')
 
-  // ── Detect Stripe redirect back ────────────────────────────
-  // Stripe sends users back to /?upgraded=true on success.
-  // We navigate to AI Chat and refresh the profile so is_pro
-  // updates immediately without requiring a manual page reload.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+
+    // ── Stripe redirect ──
     if (params.get('upgraded') === 'true') {
-      // Clean up the URL
       window.history.replaceState({}, '', window.location.pathname)
-      // Navigate to AI Chat and refresh profile
       setPage('ai-chat')
       refreshProfile()
+      return
+    }
+
+    // ── Google Drive OAuth redirect ──
+    const code  = params.get('code')
+    const state = params.get('state')
+    if (code && state === 'gdrive') {
+      window.history.replaceState({}, '', window.location.pathname)
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (!session) return
+        try {
+          const res = await fetch('/api/gdrive-callback', {
+            method:  'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ code }),
+          })
+          if (res.ok) {
+            await refreshProfile()
+          } else {
+            const err = await res.json()
+            console.error('[GDrive callback]', err.error)
+          }
+        } catch (err) {
+          console.error('[GDrive callback]', err)
+        }
+      })
     }
   }, [refreshProfile])
 
-  // ── Guards ──
   if (authLoading || (user && profileLoading)) return <LoadingScreen />
   if (!user)    return <AuthPage />
   if (!profile) return <Onboarding onComplete={saveProfile} />
@@ -74,10 +97,10 @@ export default function App() {
         <Dashboard {...sharedProps} setPage={setPage} />
       )}
       {page === 'new-entry' && (
-        <NewEntry {...sharedProps} addEntry={addEntry} setPage={setPage} />
+        <NewEntry {...sharedProps} addEntry={addEntry} setPage={setPage} gDrive={gDrive} />
       )}
       {page === 'history' && (
-        <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} />
+        <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} gDrive={gDrive} />
       )}
       {page === 'ai-chat' && (
         <AIChat {...sharedProps} refreshProfile={refreshProfile} />
