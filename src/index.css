@@ -165,6 +165,32 @@ body {
   overflow-y: auto;
 }
 
+/* ─── Mobile top header ─────────────────────────────────── */
+
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+  padding: 0 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.mobile-header-logo {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
 /* ─── Mobile nav bar ─────────────────────────────────────── */
 
 .mobile-nav {
@@ -374,16 +400,21 @@ body {
     display: none;
   }
 
+  .mobile-header {
+    display: flex;
+  }
+
   .mobile-nav {
     display: flex;
   }
 
   .app-main {
     padding-bottom: var(--mobile-nav-h);
+    padding-top: 52px;
   }
 
   .app-content {
-    padding: 24px 16px calc(24px + var(--mobile-nav-h));
+    padding: 20px 16px calc(20px + var(--mobile-nav-h));
   }
 
   /* Stack grids on mobile */
