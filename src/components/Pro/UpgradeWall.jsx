@@ -14,7 +14,6 @@ export default function UpgradeWall({ user, onUpgradeSuccess }) {
   const handleUpgrade = async () => {
     setLoading(true)
     setError('')
-
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -25,11 +24,8 @@ export default function UpgradeWall({ user, onUpgradeSuccess }) {
           origin:    window.location.origin,
         }),
       })
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to start checkout.')
-
-      // Redirect to Stripe hosted checkout
       window.location.href = data.url
     } catch (err) {
       setError(err.message)
@@ -39,24 +35,20 @@ export default function UpgradeWall({ user, onUpgradeSuccess }) {
 
   return (
     <div style={styles.root}>
-      {/* Glow */}
       <div style={styles.glow} aria-hidden />
 
       <div style={styles.card}>
-        {/* Badge */}
         <div style={styles.badge}>
           <span style={styles.badgeDot} />
           LogBook Pro
         </div>
 
-        {/* Heading */}
         <h2 style={styles.heading}>Unlock AI Chat</h2>
         <p style={styles.sub}>
           Your AI assistant has read every entry in your logbook and is ready
           to surface insights, patterns, and answers — for less than a coffee a month.
         </p>
 
-        {/* Features */}
         <div style={styles.features}>
           {FEATURES.map((f, i) => (
             <div key={i} style={styles.feature}>
@@ -66,21 +58,21 @@ export default function UpgradeWall({ user, onUpgradeSuccess }) {
           ))}
         </div>
 
-        {/* Price */}
+        {/* Price row — all on one line */}
         <div style={styles.priceRow}>
-          <span style={styles.price}>€4.99</span>
-          <span style={styles.pricePer}> / month</span>
-          <span style={styles.priceSub}>  ·  cancel any time</span>
+          <div style={styles.priceLeft}>
+            <span style={styles.price}>€4.99</span>
+            <span style={styles.pricePer}>/mo</span>
+          </div>
+          <span style={styles.priceSub}>cancel any time</span>
         </div>
 
-        {/* Error */}
         {error && (
           <div style={styles.errorBanner}>
             <span>⚠</span> {error}
           </div>
         )}
 
-        {/* CTA */}
         <button
           className="btn btn-primary"
           style={styles.cta}
@@ -88,20 +80,18 @@ export default function UpgradeWall({ user, onUpgradeSuccess }) {
           disabled={loading}
         >
           {loading
-            ? <><div className="spinner" style={{ borderTopColor: '#0f0f13' }} /> Redirecting to checkout…</>
+            ? <><div className="spinner" style={{ borderTopColor: '#0f0f13' }} /> Redirecting…</>
             : 'Upgrade to Pro →'
           }
         </button>
 
         <p style={styles.legal}>
-          Secure payment via Stripe. You can cancel any time from your account settings.
+          Secure payment via Stripe. Cancel any time from your account settings.
         </p>
       </div>
     </div>
   )
 }
-
-// ─── Styles ───────────────────────────────────────────────────
 
 const styles = {
   root: {
@@ -111,7 +101,7 @@ const styles = {
     justifyContent: 'center',
     position: 'relative',
     overflow: 'hidden',
-    padding: '20px 0',
+    padding: '16px 0',
   },
   glow: {
     position: 'absolute',
@@ -131,7 +121,7 @@ const styles = {
     background: 'var(--bg-card)',
     border: '1px solid rgba(240, 192, 96, 0.2)',
     borderRadius: 'var(--radius-xl)',
-    padding: '40px 44px',
+    padding: 'clamp(24px, 5vw, 40px) clamp(20px, 6vw, 44px)',
     width: '100%',
     maxWidth: '480px',
     animation: 'fadeIn 0.3s ease both',
@@ -149,7 +139,7 @@ const styles = {
     fontWeight: 500,
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
-    marginBottom: '22px',
+    marginBottom: '18px',
   },
   badgeDot: {
     width: '6px',
@@ -160,7 +150,7 @@ const styles = {
   },
   heading: {
     fontFamily: 'var(--font-heading)',
-    fontSize: '28px',
+    fontSize: 'clamp(22px, 5vw, 28px)',
     fontWeight: 600,
     color: 'var(--text-primary)',
     letterSpacing: '-0.02em',
@@ -170,14 +160,14 @@ const styles = {
     fontSize: '14px',
     color: 'var(--text-secondary)',
     lineHeight: 1.7,
-    marginBottom: '28px',
+    marginBottom: '24px',
   },
   features: {
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
-    marginBottom: '28px',
-    padding: '20px',
+    marginBottom: '24px',
+    padding: '16px',
     background: 'var(--bg-elevated)',
     borderRadius: 'var(--radius)',
     border: '1px solid var(--border)',
@@ -202,26 +192,35 @@ const styles = {
   },
   priceRow: {
     display: 'flex',
-    alignItems: 'baseline',
-    gap: '0px',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: '20px',
+    gap: '8px',
+  },
+  priceLeft: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: '4px',
   },
   price: {
     fontFamily: 'var(--font-heading)',
-    fontSize: '36px',
+    fontSize: '32px',
     fontWeight: 700,
     color: 'var(--accent)',
     letterSpacing: '-0.02em',
   },
   pricePer: {
-    fontSize: '16px',
+    fontSize: '15px',
     color: 'var(--text-secondary)',
-    marginLeft: '4px',
   },
   priceSub: {
-    fontSize: '13px',
+    fontSize: '12px',
     color: 'var(--text-muted)',
-    marginLeft: '8px',
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    borderRadius: '99px',
+    padding: '3px 10px',
+    whiteSpace: 'nowrap',
   },
   errorBanner: {
     background: 'var(--red-dim)',
@@ -239,7 +238,7 @@ const styles = {
     height: '48px',
     fontSize: '15px',
     fontWeight: 600,
-    marginBottom: '14px',
+    marginBottom: '12px',
   },
   legal: {
     fontSize: '12px',

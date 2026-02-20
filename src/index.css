@@ -491,12 +491,12 @@ body {
 
 .input {
   width: 100%;
+  min-width: 0;
   background: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: var(--font-body);
-  font-size: 14px;
   padding: 10px 14px;
   transition: border-color var(--t-normal), box-shadow var(--t-normal);
   outline: none;

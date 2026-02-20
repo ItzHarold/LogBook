@@ -280,11 +280,11 @@ const styles = {
   },
   topGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
     gap: '16px',
   },
   textGrid: { display: 'flex', flexDirection: 'column', gap: '20px' },
-  fieldWrap: { display: 'flex', flexDirection: 'column' },
+  fieldWrap: { display: 'flex', flexDirection: 'column', minWidth: 0 },
   textarea: { resize: 'vertical', minHeight: '80px', lineHeight: 1.7 },
   actions: {
     display: 'flex',
