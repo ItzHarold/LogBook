@@ -190,10 +190,10 @@ export default function History({ profile, entries, entriesLoading, deleteEntry,
 
   return (
     <div className="page-fade">
-      <div style={styles.header}>
+      <div className="page-header">
         <div>
-          <h1 style={styles.title}>History</h1>
-          <p style={styles.sub}>
+          <h1 className="page-title">History</h1>
+          <p className="page-sub">
             {entries.length > 0
               ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} in ${profile.logbook_name}`
               : profile.logbook_name}

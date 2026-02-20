@@ -189,15 +189,17 @@ export default function NewEntry({ profile, addEntry, setPage, gDrive }) {
 
   return (
     <div className="page-fade">
-      <div style={styles.header}>
-        <h1 style={styles.title}>New Entry</h1>
-        <p style={styles.sub}>Log your work day for {profile.logbook_name}</p>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">New Entry</h1>
+          <p className="page-sub">Log your work day for {profile.logbook_name}</p>
+        </div>
       </div>
 
       <form onSubmit={handleSave}>
         <div className="card" style={styles.section}>
           <h2 style={styles.sectionTitle}>General</h2>
-          <div style={styles.topGrid}>
+          <div className="top-grid" style={styles.topGrid}>
             <Field label="Date" id="date" required error={errors.date}>
               <input id="date" type="date" className={`input ${errors.date ? 'input-error' : ''}`} value={form.date} onChange={set('date')} max={today()} />
             </Field>

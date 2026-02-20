@@ -37,7 +37,7 @@ export default function Sidebar({ page, setPage, profile, signOut }) {
   ]
 
   return (
-    <aside style={styles.sidebar}>
+    <aside className="sidebar">
       {/* Logo */}
       <div style={styles.logo}>
         <span style={styles.logoIcon}>📓</span>

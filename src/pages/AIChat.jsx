@@ -267,7 +267,8 @@ const styles = {
   root: {
     display: 'flex',
     flexDirection: 'column',
-    height: 'calc(100vh - 80px)',
+    height: 'calc(100dvh - 80px)',
+    minHeight: 0,
   },
   header: {
     display: 'flex',

@@ -82,10 +82,10 @@ export default function Dashboard({ profile, entries, entriesLoading, setPage })
 
   return (
     <div className="page-fade">
-      <div style={styles.header}>
+      <div className="page-header">
         <div>
           <p style={styles.greeting}>{greeting}, {profile.name}.</p>
-          <h1 style={styles.title}>{profile.logbook_name}</h1>
+          <h1 className="page-title">{profile.logbook_name}</h1>
         </div>
         {entries.length > 0 && (
           <button className="btn btn-primary" onClick={() => setPage('new-entry')}>
@@ -114,7 +114,7 @@ export default function Dashboard({ profile, entries, entriesLoading, setPage })
         </div>
       ) : (
         <>
-          <div style={styles.statsGrid}>
+          <div className="stats-grid" style={styles.statsGrid}>
             <StatCard
               label="Total hours logged"
               value={totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}
@@ -131,7 +131,7 @@ export default function Dashboard({ profile, entries, entriesLoading, setPage })
           </div>
 
           {chartData.length >= 2 && (
-            <div style={styles.chartsGrid}>
+            <div className="charts-grid" style={styles.chartsGrid}>
               <div className="card" style={styles.chartCard}>
                 <h2 style={styles.chartTitle}>Energy level over time</h2>
                 <p style={styles.chartSub}>Last {chartData.length} entries</p>
