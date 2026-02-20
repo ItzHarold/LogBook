@@ -33,6 +33,12 @@ function wrappedLines(doc, text, maxWidth) {
   return doc.splitTextToSize(String(text).trim(), maxWidth)
 }
 
+function addDarkPage(doc) {
+  doc.addPage()
+  setFill(doc, C.BG)
+  doc.rect(0, 0, C.PAGE_W, C.PAGE_H, 'F')
+}
+
 function drawSection(doc, label, content, y, pageH, margin, contentW) {
   if (content === null || content === undefined || content === '' || content === false) return y
   const displayContent = content === true ? 'Yes' : String(content)
@@ -44,7 +50,7 @@ function drawSection(doc, label, content, y, pageH, margin, contentW) {
   if (!lines.length) return y
 
   const blockH = PAD_V + LABEL_H + 4 + lines.length * LINE_H + PAD_V
-  if (y + blockH > pageH - margin - 10) { doc.addPage(); y = margin + 10 }
+  if (y + blockH > pageH - margin - 10) { addDarkPage(doc); y = margin + 10 }
 
   setFill(doc, C.BG_SECTION)
   doc.roundedRect(margin, y, contentW, blockH, 3, 3, 'F')
@@ -154,17 +160,23 @@ function buildDoc(entry, profile, activeFields = []) {
     doc.text('No notes recorded for this entry.', MARGIN, y + 10)
   }
 
-  // Footer
-  const footerY = PAGE_H - 14
-  setDrawColor(doc, C.BORDER); doc.setLineWidth(0.3)
-  doc.line(MARGIN, footerY - 4, PAGE_W - MARGIN, footerY - 4)
-  doc.setFont('helvetica', 'italic'); doc.setFontSize(9)
-  setTextColor(doc, C.TEXT_MUTED)
-  doc.text(`— ${profile.name}`, MARGIN, footerY)
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
-  const pageLabel  = `${profile.logbook_name} · ${entry.date}`
-  const pageLabelW = doc.getTextWidth(pageLabel)
-  doc.text(pageLabel, PAGE_W - MARGIN - pageLabelW, footerY)
+  // Footer on every page
+  const totalPages = doc.getNumberOfPages()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    const footerY = PAGE_H - 14
+    setDrawColor(doc, C.BORDER); doc.setLineWidth(0.3)
+    doc.line(MARGIN, footerY - 4, PAGE_W - MARGIN, footerY - 4)
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(9)
+    setTextColor(doc, C.TEXT_MUTED)
+    doc.text(`— ${profile.name}`, MARGIN, footerY)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+    const pageLabel  = totalPages > 1
+      ? `${profile.logbook_name} · ${entry.date} · ${p}/${totalPages}`
+      : `${profile.logbook_name} · ${entry.date}`
+    const pageLabelW = doc.getTextWidth(pageLabel)
+    doc.text(pageLabel, PAGE_W - MARGIN - pageLabelW, footerY)
+  }
 
   return doc
 }
