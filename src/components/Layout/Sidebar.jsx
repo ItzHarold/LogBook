@@ -11,7 +11,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar({
   page, setPage, profile, signOut,
-  logbooks, activeLogbook, setActiveLogbookId, addLogbook,
+  logbooks, activeLogbook, setActiveLogbookId, addLogbook, deleteLogbook,
 }) {
   const [profileOpen, setProfileOpen] = useState(false)
 
@@ -31,6 +31,7 @@ export default function Sidebar({
             activeLogbook={activeLogbook}
             setActiveLogbookId={setActiveLogbookId}
             addLogbook={addLogbook}
+            deleteLogbook={deleteLogbook}
           />
         </div>
 

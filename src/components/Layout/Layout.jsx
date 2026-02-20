@@ -3,9 +3,9 @@ import MobileNav from './MobileNav'
 
 export default function Layout({
   children, page, setPage, profile, signOut,
-  logbooks, activeLogbook, setActiveLogbookId, addLogbook,
+  logbooks, activeLogbook, setActiveLogbookId, addLogbook, deleteLogbook,
 }) {
-  const logbookProps = { logbooks, activeLogbook, setActiveLogbookId, addLogbook }
+  const logbookProps = { logbooks, activeLogbook, setActiveLogbookId, addLogbook, deleteLogbook }
 
   return (
     <div className="app-root">

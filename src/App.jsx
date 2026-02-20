@@ -42,8 +42,8 @@ export default function App() {
   const { user, loading: authLoading, signOut } = useAuth()
   const { profile, loading: profileLoading, saveProfile, refreshProfile } = useProfile(user?.id)
   const {
-    logbooks, activeLogbook,
-    setActiveLogbookId, addLogbook,
+    logbooks, activeLogbook, activeFields,
+    setActiveLogbookId, addLogbook, deleteLogbook,
     loading: logbooksLoading,
   } = useLogbooks(user?.id)
 
@@ -141,7 +141,7 @@ export default function App() {
     user,
   }
 
-  const logbookProps = { logbooks, activeLogbook, setActiveLogbookId, addLogbook }
+  const logbookProps = { logbooks, activeLogbook, setActiveLogbookId, addLogbook, deleteLogbook }
 
   return (
     <Layout
@@ -153,10 +153,10 @@ export default function App() {
         <Dashboard {...sharedProps} setPage={setPage} />
       )}
       {page === 'new-entry' && (
-        <NewEntry {...sharedProps} addEntry={addEntry} setPage={setPage} gDrive={gDrive} />
+        <NewEntry {...sharedProps} addEntry={addEntry} setPage={setPage} gDrive={gDrive} activeFields={activeFields} />
       )}
       {page === 'history' && (
-        <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} gDrive={gDrive} />
+        <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} gDrive={gDrive} activeFields={activeFields} />
       )}
       {page === 'ai-chat' && (
         <AIChat {...sharedProps} refreshProfile={refreshProfile} />

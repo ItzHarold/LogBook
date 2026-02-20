@@ -138,28 +138,29 @@ function EntryCard({ entry, onDelete, profile, gDrive }) {
         </div>
       </div>
 
-      {(entry.worked_on || entry.learned || entry.blockers) && (
-        <div style={styles.cardBody}>
-          {entry.worked_on && (
-            <div style={styles.previewRow}>
-              <span style={styles.previewLabel}>Worked on</span>
-              <span style={styles.previewText}>{truncate(entry.worked_on)}</span>
-            </div>
-          )}
-          {entry.learned && (
-            <div style={styles.previewRow}>
-              <span style={styles.previewLabel}>Learned</span>
-              <span style={styles.previewText}>{truncate(entry.learned)}</span>
-            </div>
-          )}
-          {entry.blockers && (
-            <div style={styles.previewRow}>
-              <span style={styles.previewLabel}>Blockers</span>
-              <span style={styles.previewText}>{truncate(entry.blockers)}</span>
-            </div>
-          )}
-        </div>
-      )}
+{(() => {
+        // Show custom_data fields if present, else fall back to legacy fixed columns
+        const customEntries = entry.custom_data ? Object.entries(entry.custom_data).filter(([, v]) => v !== '' && v !== false && v != null) : []
+        const legacyFields = [
+          entry.worked_on && ['Worked on', entry.worked_on],
+          entry.learned   && ['Learned',   entry.learned],
+          entry.blockers  && ['Blockers',  entry.blockers],
+        ].filter(Boolean)
+        const rows = customEntries.length ? customEntries : legacyFields
+        if (!rows.length) return null
+        return (
+          <div style={styles.cardBody}>
+            {rows.map(([key, val], i) => (
+              <div key={i} style={styles.previewRow}>
+                <span style={styles.previewLabel}>{key.replace(/_/g, ' ')}</span>
+                <span style={styles.previewText}>
+                  {typeof val === 'boolean' ? (val ? 'Yes' : 'No') : truncate(String(val))}
+                </span>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       {uploadStatus === 'error' && (
         <div style={styles.uploadError}>⚠ {uploadMsg}</div>
