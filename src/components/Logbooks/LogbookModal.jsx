@@ -42,12 +42,10 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
   }
 
   const content = (
-    <>
-      {/* Backdrop — covers true viewport */}
-      <div style={styles.backdrop} onClick={onClose} />
-
-      {/* Modal — centered in true viewport */}
+    /* Full-viewport scroll container — this is what scrolls, not the card */
+    <div style={styles.scrollContainer} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div style={styles.modal} role="dialog" aria-modal="true">
+
         {mode === 'create' ? (
           <>
             <div style={styles.modalHeader}>
@@ -135,37 +133,39 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
             </div>
           </>
         )}
+
       </div>
-    </>
+    </div>
   )
 
-  // Portal into body so position:fixed is always relative to the true viewport
   return createPortal(content, document.body)
 }
 
 const styles = {
-  backdrop: {
+  /* Covers the whole viewport, scrollable, centers the card */
+  scrollContainer: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.65)',
     zIndex: 1000,
+    background: 'rgba(0,0,0,0.65)',
+    overflowY: 'auto',
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    padding: '48px 16px 48px',
     animation: 'fadeIn 0.15s ease both',
   },
   modal: {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 'min(560px, calc(100vw - 32px))',
-    maxHeight: 'calc(100dvh - 48px)',
-    overflowY: 'auto',
+    width: '100%',
+    maxWidth: '540px',
     background: 'var(--bg-elevated)',
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-xl)',
     padding: '28px',
-    zIndex: 1001,
-    animation: 'slideUp 0.2s cubic-bezier(0.32,0.72,0,1) both',
     boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+    animation: 'slideUp 0.2s cubic-bezier(0.32,0.72,0,1) both',
+    /* Never a fixed height — grows with content */
+    flexShrink: 0,
   },
   modalHeader: {
     display: 'flex',
@@ -199,7 +199,7 @@ const styles = {
   field: { display: 'flex', flexDirection: 'column' },
   fieldBuilderWrap: {
     borderTop: '1px solid var(--border)',
-    paddingTop: '16px',
+    paddingTop: '20px',
     marginTop: '20px',
   },
   errorText: {
@@ -211,13 +211,13 @@ const styles = {
     display: 'flex',
     gap: '10px',
     justifyContent: 'flex-end',
-    marginTop: '24px',
+    marginTop: '28px',
     paddingTop: '20px',
     borderTop: '1px solid var(--border)',
   },
   deleteBody: {
     textAlign: 'center',
-    padding: '8px 0 24px',
+    padding: '12px 0 24px',
   },
   deleteIcon: {
     fontSize: '36px',

@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
-export default function ProfilePanel({ profile, signOut, onClose, mobile = false }) {
+export default function ProfilePanel({ profile, signOut, onClose }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting]                   = useState(false)
   const [deleteError, setDeleteError]             = useState('')
@@ -31,14 +31,9 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
 
   const content = (
     <>
-      {/* Overlay */}
-      <div style={styles.overlay} onClick={onClose} />
+      <div style={styles.backdrop} onClick={onClose} />
 
-      {/* Panel */}
-      <div style={{
-        ...styles.panel,
-        ...(mobile ? styles.panelMobile : {}),
-      }}>
+      <div style={styles.modal}>
         {/* Header */}
         <div style={styles.header}>
           <div style={styles.avatar}>
@@ -48,10 +43,10 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
             <div style={styles.name}>{profile.name}</div>
             <div style={styles.org}>{profile.organization}</div>
           </div>
-          <button style={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+          <button style={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
 
-        {/* Plan badge */}
+        {/* Plan */}
         <div style={styles.planRow}>
           <span style={{
             ...styles.planBadge,
@@ -59,9 +54,7 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
           }}>
             {profile.is_pro ? '✦ Pro' : 'Free plan'}
           </span>
-          {!profile.is_pro && (
-            <span style={styles.upgradeHint}>Upgrade for AI Chat</span>
-          )}
+          {!profile.is_pro && <span style={styles.upgradeHint}>Upgrade for AI Chat</span>}
         </div>
 
         <div style={styles.divider} />
@@ -70,18 +63,16 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
         <div style={styles.actions}>
           <a
             href="/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
             style={styles.actionBtn}
             onClick={onClose}
           >
             <span style={styles.actionIcon}>🔒</span>
-            <span>Privacy Policy</span>
+            Privacy Policy
           </a>
 
           <button style={styles.actionBtn} onClick={() => { onClose(); signOut() }}>
             <span style={styles.actionIcon}>↩</span>
-            <span>Sign out</span>
+            Sign out
           </button>
         </div>
 
@@ -90,16 +81,16 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
         {/* Delete account */}
         {!showDeleteConfirm ? (
           <button
-            style={{ ...styles.actionBtn, ...styles.dangerBtn }}
+            style={{ ...styles.actionBtn, color: 'var(--red)' }}
             onClick={() => setShowDeleteConfirm(true)}
           >
-            <span style={{ ...styles.actionIcon, ...styles.dangerIcon }}>🗑</span>
-            <span>Delete account</span>
+            <span style={{ ...styles.actionIcon, background: 'var(--red-dim)', border: '1px solid rgba(248,113,113,0.2)' }}>🗑</span>
+            Delete account
           </button>
         ) : (
           <div style={styles.deleteConfirm}>
             <p style={styles.deleteWarning}>
-              This permanently deletes all your logbooks, entries, and cancels any active subscription. This cannot be undone.
+              Permanently deletes all your logbooks, entries, and cancels any active subscription. Cannot be undone.
             </p>
             {deleteError && (
               <p style={{ fontSize: '12px', color: 'var(--red)', marginBottom: '10px' }}>⚠ {deleteError}</p>
@@ -107,7 +98,7 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 className="btn btn-danger"
-                style={{ flex: 1, fontSize: '13px' }}
+                style={{ flex: 1, fontSize: '12px' }}
                 onClick={handleDeleteAccount}
                 disabled={deleting}
               >
@@ -117,7 +108,7 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
               </button>
               <button
                 className="btn btn-secondary"
-                style={{ flex: 1, fontSize: '13px' }}
+                style={{ flex: 1, fontSize: '12px' }}
                 onClick={() => { setShowDeleteConfirm(false); setDeleteError('') }}
                 disabled={deleting}
               >
@@ -134,43 +125,36 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
 }
 
 const styles = {
-  overlay: {
+  backdrop: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.5)',
+    background: 'rgba(0,0,0,0.55)',
     zIndex: 1000,
     animation: 'fadeIn 0.15s ease both',
   },
-  panel: {
+  modal: {
     position: 'fixed',
-    bottom: '80px',
-    left: '12px',
-    width: '280px',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 'min(360px, calc(100vw - 32px))',
     background: 'var(--bg-elevated)',
     border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '20px',
+    borderRadius: 'var(--radius-xl)',
+    padding: '24px',
     zIndex: 1001,
-    animation: 'slideUp 0.2s ease both',
-    boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
-  },
-  panelMobile: {
-    left: '50%',
-    right: 'auto',
-    transform: 'translateX(-50%)',
-    bottom: 'calc(var(--mobile-nav-h) + 8px)',
-    width: 'calc(100vw - 32px)',
-    maxWidth: '360px',
+    animation: 'slideUp 0.2s cubic-bezier(0.32,0.72,0,1) both',
+    boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    marginBottom: '14px',
+    marginBottom: '16px',
   },
   avatar: {
-    width: '40px',
-    height: '40px',
+    width: '42px',
+    height: '42px',
     borderRadius: '50%',
     background: 'var(--accent-dim)',
     border: '1px solid rgba(240,192,96,0.25)',
@@ -178,14 +162,14 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '16px',
+    fontSize: '17px',
     fontWeight: 600,
     fontFamily: 'var(--font-heading)',
     flexShrink: 0,
   },
   userInfo: { flex: 1, overflow: 'hidden' },
   name: {
-    fontSize: '14px',
+    fontSize: '15px',
     fontWeight: 600,
     color: 'var(--text-primary)',
     overflow: 'hidden',
@@ -195,21 +179,21 @@ const styles = {
   org: {
     fontSize: '12px',
     color: 'var(--text-muted)',
+    marginTop: '2px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    marginTop: '2px',
   },
   closeBtn: {
     background: 'none',
     border: 'none',
     color: 'var(--text-muted)',
     cursor: 'pointer',
-    fontSize: '14px',
-    padding: '4px',
-    flexShrink: 0,
-    lineHeight: 1,
+    fontSize: '15px',
+    padding: '4px 6px',
+    borderRadius: 'var(--radius-sm)',
     fontFamily: 'var(--font-body)',
+    flexShrink: 0,
   },
   planRow: {
     display: 'flex',
@@ -252,8 +236,8 @@ const styles = {
   actionBtn: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    padding: '9px 8px',
+    gap: '12px',
+    padding: '10px 8px',
     background: 'none',
     border: 'none',
     borderRadius: 'var(--radius-sm)',
@@ -264,32 +248,29 @@ const styles = {
     textDecoration: 'none',
     width: '100%',
     transition: 'background var(--t-fast)',
+    textAlign: 'left',
   },
-  dangerBtn: { color: 'var(--red)' },
   actionIcon: {
-    width: '28px',
-    height: '28px',
-    borderRadius: '6px',
+    width: '30px',
+    height: '30px',
+    borderRadius: '7px',
     background: 'var(--bg-card)',
     border: '1px solid var(--border)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '13px',
+    fontSize: '14px',
     flexShrink: 0,
-  },
-  dangerIcon: {
-    background: 'var(--red-dim)',
-    borderColor: 'rgba(248,113,113,0.2)',
   },
   deleteConfirm: {
     background: 'var(--bg-card)',
     border: '1px solid rgba(248,113,113,0.2)',
     borderRadius: 'var(--radius-sm)',
     padding: '14px',
+    marginTop: '4px',
   },
   deleteWarning: {
-    fontSize: '12px',
+    fontSize: '13px',
     color: 'var(--text-secondary)',
     lineHeight: 1.6,
     marginBottom: '12px',
