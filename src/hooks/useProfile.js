@@ -16,6 +16,7 @@ export function useProfile(userId) {
       return
     }
 
+    setLoading(true)
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
