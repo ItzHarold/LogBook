@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { generatePDF } from '../lib/generatePDF'
+import { formatDuration } from '../lib/timeUtils'
 import GDriveConnect from '../components/GDrive/GDriveConnect'
 
 const ENERGY_COLOR = { green: '#4ade80', yellow: '#facc15', red: '#f87171' }
@@ -67,7 +68,12 @@ function EntryCard({ entry, onDelete, profile, gDrive }) {
                 {ENERGY_LABEL[entry.energy]} energy
               </span>
               <span style={styles.sep}>·</span>
-              <span>{entry.hours}h</span>
+              {entry.start_time && entry.end_time ? (
+                <span style={styles.timeRange}>{entry.start_time} – {entry.end_time}</span>
+              ) : null}
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                {formatDuration(entry.hours)}
+              </span>
               <span style={styles.sep}>·</span>
               <span>{entry.location}</span>
             </div>
@@ -294,6 +300,7 @@ const styles = {
     flexWrap: 'wrap',
   },
   sep: { color: 'var(--text-muted)' },
+  timeRange: { fontSize: '12px', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' },
   cardActions: { display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'wrap' },
   deleteConfirm: { display: 'flex', alignItems: 'center', gap: '6px' },
   cardBody: {

@@ -439,6 +439,17 @@ body {
     padding: 20px 16px calc(20px + var(--mobile-nav-h));
   }
 
+  /* Time row collapses to 2-col on mobile */
+  .time-row-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .time-row-grid .time-arrow-wrap { display: none !important; }
+  .time-row-grid .duration-badge-wrap {
+    grid-column: 1 / -1;
+    justify-content: center;
+    padding-top: 4px !important;
+  }
+
   /* Stack grids on mobile */
   .stats-grid {
     grid-template-columns: repeat(2, 1fr) !important;

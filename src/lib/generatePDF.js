@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import { formatDuration } from './timeUtils'
 
 // ─── Design constants ─────────────────────────────────────────
 
@@ -91,15 +92,20 @@ function buildDoc(entry, profile) {
   const energyColor = ENERGY_COLOR[entry.energy]
   const energyLabel = ENERGY_LABEL[entry.energy]
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
+  // Build meta line: org · time range · duration · energy ● · location
+  const timeStr = (entry.start_time && entry.end_time)
+    ? `${entry.start_time} – ${entry.end_time}  (${formatDuration(entry.hours)})`
+    : `${entry.hours}h`
+
   setTextColor(doc, C.TEXT_MUTED)
   doc.text(profile.organization, MARGIN, 36)
   const orgW = doc.getTextWidth(profile.organization)
-  const SEP  = 8
+  const SEP = 7
   setTextColor(doc, C.TEXT_SECONDARY)
   doc.text('·', MARGIN + orgW + SEP / 2, 36)
-  doc.text(`${entry.hours}h`, MARGIN + orgW + SEP + 4, 36)
-  const hoursW = doc.getTextWidth(`${entry.hours}h`)
-  const dotX   = MARGIN + orgW + SEP + 4 + hoursW + SEP
+  doc.text(timeStr, MARGIN + orgW + SEP + 3, 36)
+  const timeW = doc.getTextWidth(timeStr)
+  const dotX  = MARGIN + orgW + SEP + 3 + timeW + SEP
   setFill(doc, energyColor)
   doc.circle(dotX + 1.5, 34.5, 1.5, 'F')
   setTextColor(doc, energyColor)
