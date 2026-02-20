@@ -13,6 +13,10 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
     if (!form.name.trim()) { setError('Logbook name is required.'); return }
     const invalid = fields.find((f) => !f.label.trim())
     if (invalid) { setError('All fields must have a name.'); return }
+    // Check for duplicate field names
+    const labels = fields.map((f) => f.label.trim().toLowerCase())
+    const dup = labels.find((l, i) => labels.indexOf(l) !== i)
+    if (dup) { setError(`You have two fields both named "${fields.find((f,i) => labels.indexOf(f.label.trim().toLowerCase()) !== i)?.label}". Each field must have a unique name.`); return }
     setSaving(true)
     setError('')
     try {
@@ -24,7 +28,12 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
       })
       onClose()
     } catch (err) {
-      setError(err.message ?? 'Failed to create logbook.')
+      const msg = err.message ?? ''
+      setError(
+        msg.includes('duplicate key')
+          ? 'Two or more fields have the same name. Please give each field a unique name.'
+          : msg || 'Failed to create logbook.'
+      )
       setSaving(false)
     }
   }
