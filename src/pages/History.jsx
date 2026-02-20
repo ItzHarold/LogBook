@@ -19,7 +19,7 @@ function truncate(str, n = 120) {
   return str.slice(0, n).trimEnd() + '…'
 }
 
-function EntryCard({ entry, onDelete, profile, gDrive }) {
+function EntryCard({ entry, onDelete, profile, gDrive, activeFields }) {
   const [deleting, setDeleting]         = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [uploadStatus, setUploadStatus] = useState('') // '' | 'uploading' | 'done' | 'error'
@@ -39,7 +39,7 @@ function EntryCard({ entry, onDelete, profile, gDrive }) {
   const handleGDrive = async () => {
     setUploadStatus('uploading')
     setUploadMsg('')
-    const ok = await gDrive.uploadPDF(entry, profile)
+    const ok = await gDrive.uploadPDF(entry, profile, activeFields)
     if (ok) {
       setUploadStatus('done')
       setUploadMsg('Saved to OneDrive ✓')
@@ -86,7 +86,7 @@ function EntryCard({ entry, onDelete, profile, gDrive }) {
             className="btn btn-ghost"
             style={{ fontSize: '12px' }}
             title="Download PDF"
-            onClick={() => generatePDF(entry, profile)}
+            onClick={() => generatePDF(entry, profile, activeFields)}
           >
             ↓ PDF
           </button>
@@ -186,7 +186,7 @@ function EntryCard({ entry, onDelete, profile, gDrive }) {
   )
 }
 
-export default function History({ profile, entries, entriesLoading, deleteEntry, setPage, gDrive }) {
+export default function History({ profile, entries, entriesLoading, deleteEntry, setPage, gDrive, activeFields = [] }) {
   if (entriesLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '80px' }}>
@@ -241,6 +241,7 @@ export default function History({ profile, entries, entriesLoading, deleteEntry,
               onDelete={deleteEntry}
               profile={profile}
               gDrive={gDrive}
+              activeFields={activeFields}
             />
           ))}
         </div>

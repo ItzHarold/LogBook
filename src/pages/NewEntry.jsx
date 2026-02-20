@@ -96,9 +96,10 @@ export default function NewEntry({ profile, addEntry, setPage, gDrive, activeFie
   const [saved, setSaved]       = useState(null)
   const [gDriveOk, setGDriveOk] = useState('')
 
-  // Auto-fill start time with current time on first render
+  // Auto-fill start/end with the exact same time on first render
   useEffect(() => {
-    setCore((c) => ({ ...c, start_time: nowTime(), end_time: nowTime() }))
+    const t = nowTime()
+    setCore((c) => ({ ...c, start_time: t, end_time: t }))
   }, [])
 
   const hours = computeHours(core.start_time, core.end_time)
@@ -144,7 +145,7 @@ export default function NewEntry({ profile, addEntry, setPage, gDrive, activeFie
         custom_data: custom,
       })
       setSaved(entry)
-      generatePDF(entry, profile)
+      generatePDF(entry, profile, activeFields)
     } catch (err) {
       setErrors({ submit: err.message || 'Failed to save entry. Please try again.' })
     } finally {
@@ -156,7 +157,7 @@ export default function NewEntry({ profile, addEntry, setPage, gDrive, activeFie
     if (!saved) return
     gDrive.clearUploadError?.()
     setGDriveOk('')
-    const ok = await gDrive.uploadPDF(saved, profile)
+    const ok = await gDrive.uploadPDF(saved, profile, activeFields)
     if (ok) setGDriveOk('Saved to your Google Drive LogBook folder ✓')
   }
 

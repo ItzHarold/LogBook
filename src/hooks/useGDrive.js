@@ -45,14 +45,14 @@ export function useGDrive(profile, refreshProfile) {
   }, [refreshProfile])
 
   /** Generates the PDF for an entry and uploads it to the user's Google Drive. */
-  const uploadPDF = useCallback(async (entry, profile) => {
+  const uploadPDF = useCallback(async (entry, profile, activeFields = []) => {
     setUploading(true)
     setUploadError('')
     setLastUploadUrl('')
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const pdfBase64 = generatePDFBase64(entry, profile)
+      const pdfBase64 = generatePDFBase64(entry, profile, activeFields)
       const filename  = getPDFFilename(entry, profile)
 
       const res  = await fetch('/api/gdrive-upload', {
