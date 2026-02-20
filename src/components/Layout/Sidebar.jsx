@@ -15,6 +15,7 @@ export default function Sidebar({
 }) {
   const [profileOpen, setProfileOpen]   = useState(false)
   const [modal, setModal]               = useState(null) // null | { mode: 'create' } | { mode: 'delete', target }
+  const [lbOpen, setLbOpen]             = useState(true)
 
   return (
     <>
@@ -27,11 +28,12 @@ export default function Sidebar({
 
         {/* Logbooks section */}
         <div style={styles.section}>
-          <div style={styles.sectionHeader}>
+          <button style={styles.sectionHeader} onClick={() => setLbOpen(v => !v)}>
             <span style={styles.sectionLabel}>Your logbooks</span>
-          </div>
+            <span style={{ ...styles.sectionChevron, transform: lbOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
+          </button>
 
-          {logbooks.map((lb) => {
+          {lbOpen && logbooks.map((lb) => {
             const isActive = lb.id === activeLogbook?.id
             return (
               <div
@@ -65,13 +67,15 @@ export default function Sidebar({
             )
           })}
 
-          <button
-            style={styles.newLbBtn}
-            onClick={() => setModal({ mode: 'create' })}
-          >
-            <span style={styles.newLbIcon}>+</span>
-            New logbook
-          </button>
+          {lbOpen && (
+            <button
+              style={styles.newLbBtn}
+              onClick={() => setModal({ mode: 'create' })}
+            >
+              <span style={styles.newLbIcon}>+</span>
+              New logbook
+            </button>
+          )}
         </div>
 
         <div style={styles.divider} />
@@ -160,7 +164,15 @@ const styles = {
   },
   section: { marginBottom: '4px' },
   sectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: '0 12px 6px',
+    width: '100%',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontFamily: 'var(--font-body)',
   },
   sectionLabel: {
     fontSize: '10px',
@@ -168,6 +180,11 @@ const styles = {
     letterSpacing: '0.07em',
     textTransform: 'uppercase',
     color: 'var(--text-muted)',
+  },
+  sectionChevron: {
+    fontSize: '11px',
+    color: 'var(--text-muted)',
+    transition: 'transform 0.15s ease',
   },
   lbRow: {
     display: 'flex',

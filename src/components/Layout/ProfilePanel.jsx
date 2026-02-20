@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
@@ -28,7 +29,7 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
     }
   }
 
-  return (
+  const content = (
     <>
       {/* Overlay */}
       <div style={styles.overlay} onClick={onClose} />
@@ -128,6 +129,8 @@ export default function ProfilePanel({ profile, signOut, onClose, mobile = false
       </div>
     </>
   )
+
+  return createPortal(content, document.body)
 }
 
 const styles = {
@@ -135,7 +138,7 @@ const styles = {
     position: 'fixed',
     inset: 0,
     background: 'rgba(0,0,0,0.5)',
-    zIndex: 300,
+    zIndex: 1000,
     animation: 'fadeIn 0.15s ease both',
   },
   panel: {
@@ -147,7 +150,7 @@ const styles = {
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-lg)',
     padding: '20px',
-    zIndex: 301,
+    zIndex: 1001,
     animation: 'slideUp 0.2s ease both',
     boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
   },

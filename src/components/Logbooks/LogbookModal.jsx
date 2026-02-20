@@ -1,7 +1,7 @@
+import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import FieldBuilder from '../Logbooks/FieldBuilder'
 
-// A single centered modal used for both creating and deleting logbooks
 export default function LogbookModal({ mode, target, onClose, addLogbook, deleteLogbook }) {
   const [form, setForm]     = useState({ name: '', organization: '', default_location: '' })
   const [fields, setFields] = useState([])
@@ -41,12 +41,12 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
     }
   }
 
-  return (
+  const content = (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — covers true viewport */}
       <div style={styles.backdrop} onClick={onClose} />
 
-      {/* Modal */}
+      {/* Modal — centered in true viewport */}
       <div style={styles.modal} role="dialog" aria-modal="true">
         {mode === 'create' ? (
           <>
@@ -56,12 +56,11 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
             </div>
 
             <form onSubmit={handleCreate}>
-              <div style={styles.fields}>
+              <div style={styles.formFields}>
                 <div style={styles.field}>
                   <label className="label" htmlFor="lb-name">Name *</label>
                   <input
-                    id="lb-name"
-                    className="input"
+                    id="lb-name" className="input"
                     placeholder="e.g. Internship Log"
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -71,8 +70,7 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
                 <div style={styles.field}>
                   <label className="label" htmlFor="lb-org">Organisation</label>
                   <input
-                    id="lb-org"
-                    className="input"
+                    id="lb-org" className="input"
                     placeholder="e.g. Acme Corp"
                     value={form.organization}
                     onChange={(e) => setForm((f) => ({ ...f, organization: e.target.value }))}
@@ -81,8 +79,7 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
                 <div style={styles.field}>
                   <label className="label" htmlFor="lb-loc">Default location</label>
                   <input
-                    id="lb-loc"
-                    className="input"
+                    id="lb-loc" className="input"
                     placeholder="e.g. Office, Remote"
                     value={form.default_location}
                     onChange={(e) => setForm((f) => ({ ...f, default_location: e.target.value }))}
@@ -97,20 +94,10 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
               {error && <p style={styles.errorText}>⚠ {error}</p>}
 
               <div style={styles.modalActions}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={onClose}
-                  disabled={saving}
-                >
+                <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ minWidth: '140px' }}
-                  disabled={saving}
-                >
+                <button type="submit" className="btn btn-primary" style={{ minWidth: '140px' }} disabled={saving}>
                   {saving
                     ? <div className="spinner" style={{ borderTopColor: '#0f0f13' }} />
                     : 'Create logbook'}
@@ -134,22 +121,13 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
               </p>
             </div>
 
-            {error && <p style={styles.errorText}>⚠ {error}</p>}
+            {error && <p style={{ ...styles.errorText, textAlign: 'center' }}>⚠ {error}</p>}
 
             <div style={styles.modalActions}>
-              <button
-                className="btn btn-secondary"
-                onClick={onClose}
-                disabled={saving}
-              >
+              <button className="btn btn-secondary" onClick={onClose} disabled={saving}>
                 Cancel
               </button>
-              <button
-                className="btn btn-danger"
-                style={{ minWidth: '140px' }}
-                onClick={handleDelete}
-                disabled={saving}
-              >
+              <button className="btn btn-danger" style={{ minWidth: '160px' }} onClick={handleDelete} disabled={saving}>
                 {saving
                   ? <div className="spinner" style={{ width: '16px', height: '16px', borderTopColor: 'var(--red)' }} />
                   : 'Yes, delete everything'}
@@ -160,14 +138,17 @@ export default function LogbookModal({ mode, target, onClose, addLogbook, delete
       </div>
     </>
   )
+
+  // Portal into body so position:fixed is always relative to the true viewport
+  return createPortal(content, document.body)
 }
 
 const styles = {
   backdrop: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.6)',
-    zIndex: 400,
+    background: 'rgba(0,0,0,0.65)',
+    zIndex: 1000,
     animation: 'fadeIn 0.15s ease both',
   },
   modal: {
@@ -182,9 +163,9 @@ const styles = {
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-xl)',
     padding: '28px',
-    zIndex: 401,
+    zIndex: 1001,
     animation: 'slideUp 0.2s cubic-bezier(0.32,0.72,0,1) both',
-    boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+    boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
   },
   modalHeader: {
     display: 'flex',
@@ -210,17 +191,16 @@ const styles = {
     fontFamily: 'var(--font-body)',
     lineHeight: 1,
   },
-  fields: {
+  formFields: {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
-    marginBottom: '4px',
   },
   field: { display: 'flex', flexDirection: 'column' },
   fieldBuilderWrap: {
     borderTop: '1px solid var(--border)',
     paddingTop: '16px',
-    marginTop: '16px',
+    marginTop: '20px',
   },
   errorText: {
     fontSize: '13px',
@@ -235,18 +215,17 @@ const styles = {
     paddingTop: '20px',
     borderTop: '1px solid var(--border)',
   },
-  // Delete mode
   deleteBody: {
     textAlign: 'center',
-    padding: '8px 0 20px',
+    padding: '8px 0 24px',
   },
   deleteIcon: {
     fontSize: '36px',
-    marginBottom: '12px',
+    marginBottom: '14px',
   },
   deleteTitle: {
     fontFamily: 'var(--font-heading)',
-    fontSize: '18px',
+    fontSize: '20px',
     fontWeight: 600,
     color: 'var(--text-primary)',
     marginBottom: '12px',
@@ -255,7 +234,7 @@ const styles = {
     fontSize: '14px',
     color: 'var(--text-secondary)',
     lineHeight: 1.6,
-    maxWidth: '380px',
+    maxWidth: '360px',
     margin: '0 auto',
   },
 }
