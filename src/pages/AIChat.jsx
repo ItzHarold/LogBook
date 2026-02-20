@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../lib/supabase'
+import UpgradeWall from '../components/Pro/UpgradeWall'
 
 // ─── Constants ────────────────────────────────────────────────
 
@@ -11,16 +13,7 @@ const SUGGESTED_PROMPTS = [
   "Which days were my most productive?",
 ]
 
-const ENERGY_LABEL = { green: 'High', yellow: 'Medium', red: 'Low' }
-
 // ─── Sub-components ───────────────────────────────────────────
-
-function Avatar({ role }) {
-  if (role === 'assistant') {
-    return <div style={styles.avatarAssistant}>✦</div>
-  }
-  return null
-}
 
 function TypingIndicator() {
   return (
@@ -39,12 +32,12 @@ function Message({ msg }) {
   const isAssistant = msg.role === 'assistant'
   return (
     <div style={{ ...styles.msgRow, ...(isAssistant ? {} : styles.msgRowUser) }}>
-      {isAssistant && <Avatar role="assistant" />}
+      {isAssistant && <div style={styles.avatarAssistant}>✦</div>}
       <div style={isAssistant ? styles.bubbleAssistant : styles.bubbleUser}>
-        {msg.content.split('\n').map((line, i) => (
+        {msg.content.split('\n').map((line, i, arr) => (
           <span key={i}>
             {line}
-            {i < msg.content.split('\n').length - 1 && <br />}
+            {i < arr.length - 1 && <br />}
           </span>
         ))}
       </div>
@@ -54,21 +47,20 @@ function Message({ msg }) {
 
 // ─── Main Component ───────────────────────────────────────────
 
-export default function AIChat({ profile, entries }) {
-  const [messages, setMessages]   = useState([])   // { role, content }[]
-  const [input, setInput]         = useState('')
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState('')
-  const [started, setStarted]     = useState(false) // hides suggested prompts after first send
+export default function AIChat({ profile, entries, user }) {
+  const [messages, setMessages] = useState([])
+  const [input, setInput]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
+  const [started, setStarted]   = useState(false)
 
   const bottomRef  = useRef(null)
   const inputRef   = useRef(null)
-  const chatboxRef = useRef(null)
 
-  // Greeting message on mount
+  // Greeting on mount
   useEffect(() => {
-    const hour = new Date().getHours()
-    const tod  = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+    const hour     = new Date().getHours()
+    const tod      = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
     const entryWord = entries.length === 1 ? 'entry' : 'entries'
     setMessages([{
       role: 'assistant',
@@ -76,7 +68,7 @@ export default function AIChat({ profile, entries }) {
     }])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
@@ -95,32 +87,40 @@ export default function AIChat({ profile, entries }) {
     setLoading(true)
 
     try {
-      // Build the messages array Claude expects (exclude the greeting from history
-      // since it's synthesised locally — only send real turns)
+      // Get the current session token to prove identity server-side
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
       const history = newMessages
-        .slice(1) // drop greeting
+        .slice(1) // drop local greeting
         .map(({ role, content }) => ({ role, content }))
 
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ messages: history, entries, profile }),
       })
 
       const data = await res.json()
+
+      // Server returned NOT_PRO — shouldn't happen if wall is shown,
+      // but handle gracefully just in case
+      if (res.status === 403 && data.code === 'NOT_PRO') {
+        setError('Your session may be out of date. Please refresh the page.')
+        setMessages((prev) => prev.slice(0, -1))
+        setStarted(messages.length > 1)
+        return
+      }
+
       if (!res.ok) throw new Error(data.error || `Server error ${res.status}`)
 
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: data.reply },
-      ])
+      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }])
     } catch (err) {
       console.error('[AIChat]', err)
-      setError(err.message?.includes('ANTHROPIC_API_KEY')
-        ? 'The AI function is not deployed yet. Follow the setup steps below.'
-        : err.message || 'Something went wrong. Please try again.'
-      )
-      // Remove the user message so they can retry
+      setError(err.message || 'Something went wrong. Please try again.')
       setMessages((prev) => prev.slice(0, -1))
       setStarted(messages.length > 1)
     } finally {
@@ -137,8 +137,8 @@ export default function AIChat({ profile, entries }) {
   }
 
   const handleClear = () => {
-    const hour = new Date().getHours()
-    const tod  = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+    const hour      = new Date().getHours()
+    const tod       = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
     const entryWord = entries.length === 1 ? 'entry' : 'entries'
     setMessages([{
       role: 'assistant',
@@ -150,104 +150,113 @@ export default function AIChat({ profile, entries }) {
   }
 
   const hasEntries = entries.length > 0
+  const isPro      = profile.is_pro === true
 
   return (
     <div className="page-fade" style={styles.root}>
       {/* ── Header ── */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>AI Chat</h1>
+          <h1 style={styles.title}>
+            AI Chat
+            {isPro && <span style={styles.proBadge}>Pro</span>}
+          </h1>
           <p style={styles.sub}>
-            {hasEntries
-              ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} loaded as context`
-              : 'Log some entries first to unlock full insights'}
+            {isPro
+              ? hasEntries
+                ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} loaded as context`
+                : 'Log some entries first to unlock full insights'
+              : 'Upgrade to Pro to unlock AI Chat'}
           </p>
         </div>
-        {messages.length > 1 && (
+        {isPro && messages.length > 1 && (
           <button className="btn btn-secondary" onClick={handleClear} style={{ fontSize: '13px' }}>
             ↺ New conversation
           </button>
         )}
       </div>
 
-      {/* ── Chat window ── */}
-      <div style={styles.chatCard}>
-        {/* Messages */}
-        <div style={styles.messages} ref={chatboxRef}>
-          {messages.map((msg, i) => (
-            <Message key={i} msg={msg} />
-          ))}
-          {loading && <TypingIndicator />}
-          <div ref={bottomRef} />
-        </div>
+      {/* ── Upgrade wall (free users) ── */}
+      {!isPro && <UpgradeWall user={user} />}
 
-        {/* Suggested prompts — shown before first real send */}
-        {!started && hasEntries && (
-          <div style={styles.suggestions}>
-            <p style={styles.suggestionsLabel}>Suggested questions</p>
-            <div style={styles.chips}>
-              {SUGGESTED_PROMPTS.map((p, i) => (
-                <button
-                  key={i}
-                  className="btn"
-                  style={styles.chip}
-                  onClick={() => send(p)}
-                  disabled={loading}
-                >
-                  {p}
-                </button>
-              ))}
+      {/* ── Chat (Pro users) ── */}
+      {isPro && (
+        <div style={styles.chatCard}>
+          {/* Messages */}
+          <div style={styles.messages}>
+            {messages.map((msg, i) => <Message key={i} msg={msg} />)}
+            {loading && <TypingIndicator />}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Suggested prompts */}
+          {!started && hasEntries && (
+            <div style={styles.suggestions}>
+              <p style={styles.suggestionsLabel}>Suggested questions</p>
+              <div style={styles.chips}>
+                {SUGGESTED_PROMPTS.map((p, i) => (
+                  <button
+                    key={i}
+                    className="btn"
+                    style={styles.chip}
+                    onClick={() => send(p)}
+                    disabled={loading}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* No entries warning */}
-        {!hasEntries && (
-          <div style={styles.noEntries}>
-            <span style={styles.noEntriesIcon}>📝</span>
-            <p>Log at least one work day first — the AI needs your entries to give meaningful answers.</p>
-          </div>
-        )}
+          {/* No entries warning */}
+          {!hasEntries && (
+            <div style={styles.noEntries}>
+              <span style={styles.noEntriesIcon}>📝</span>
+              <p>Log at least one work day first — the AI needs your entries to give meaningful answers.</p>
+            </div>
+          )}
 
-        {/* Error */}
-        {error && (
-          <div style={styles.errorBanner}>
-            <span>⚠</span> {error}
-          </div>
-        )}
+          {/* Error */}
+          {error && (
+            <div style={styles.errorBanner}>
+              <span>⚠</span> {error}
+            </div>
+          )}
 
-        {/* Input row */}
-        <div style={styles.inputRow}>
-          <textarea
-            ref={inputRef}
-            className="input"
-            style={styles.textarea}
-            placeholder={hasEntries
-              ? `Ask anything about your ${profile.logbook_name}…`
-              : 'Log some entries first…'}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            disabled={loading || !hasEntries}
-          />
-          <button
-            className="btn btn-primary"
-            style={{ flexShrink: 0, alignSelf: 'flex-end', height: '40px', minWidth: '72px' }}
-            onClick={() => send()}
-            disabled={loading || !input.trim() || !hasEntries}
-          >
-            {loading
-              ? <div className="spinner" style={{ borderTopColor: '#0f0f13', width: '16px', height: '16px' }} />
-              : 'Send'
-            }
-          </button>
+          {/* Input */}
+          <div style={styles.inputRow}>
+            <textarea
+              ref={inputRef}
+              className="input"
+              style={styles.textarea}
+              placeholder={hasEntries
+                ? `Ask anything about your ${profile.logbook_name}…`
+                : 'Log some entries first…'}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              disabled={loading || !hasEntries}
+            />
+            <button
+              className="btn btn-primary"
+              style={{ flexShrink: 0, alignSelf: 'flex-end', height: '40px', minWidth: '72px' }}
+              onClick={() => send()}
+              disabled={loading || !input.trim() || !hasEntries}
+            >
+              {loading
+                ? <div className="spinner" style={{ borderTopColor: '#0f0f13', width: '16px', height: '16px' }} />
+                : 'Send'
+              }
+            </button>
+          </div>
+
+          <p style={styles.hint}>
+            Press <kbd style={styles.kbd}>Enter</kbd> to send · <kbd style={styles.kbd}>Shift+Enter</kbd> for new line
+          </p>
         </div>
-
-        <p style={styles.hint}>
-          Press <kbd style={styles.kbd}>Enter</kbd> to send · <kbd style={styles.kbd}>Shift+Enter</kbd> for new line
-        </p>
-      </div>
+      )}
     </div>
   )
 }
@@ -276,9 +285,24 @@ const styles = {
     color: 'var(--text-primary)',
     letterSpacing: '-0.02em',
     marginBottom: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  proBadge: {
+    fontFamily: 'var(--font-body)',
+    fontSize: '11px',
+    fontWeight: 600,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    background: 'var(--accent-dim)',
+    color: 'var(--accent)',
+    border: '1px solid rgba(240, 192, 96, 0.3)',
+    borderRadius: '99px',
+    padding: '3px 10px',
+    verticalAlign: 'middle',
   },
   sub: { fontSize: '14px', color: 'var(--text-secondary)' },
-
   chatCard: {
     background: 'var(--bg-card)',
     border: '1px solid var(--border)',
@@ -288,7 +312,6 @@ const styles = {
     flex: 1,
     overflow: 'hidden',
   },
-
   messages: {
     flex: 1,
     overflowY: 'auto',
@@ -297,17 +320,13 @@ const styles = {
     flexDirection: 'column',
     gap: '16px',
   },
-
   msgRow: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: '10px',
     animation: 'fadeIn 0.2s ease both',
   },
-  msgRowUser: {
-    justifyContent: 'flex-end',
-  },
-
+  msgRowUser: { justifyContent: 'flex-end' },
   avatarAssistant: {
     width: '30px',
     height: '30px',
@@ -322,7 +341,6 @@ const styles = {
     flexShrink: 0,
     marginTop: '2px',
   },
-
   bubbleAssistant: {
     background: 'var(--bg-elevated)',
     border: '1px solid var(--border)',
@@ -343,7 +361,6 @@ const styles = {
     maxWidth: '78%',
     lineHeight: 1.7,
   },
-
   typingBubble: {
     background: 'var(--bg-elevated)',
     border: '1px solid var(--border)',
@@ -361,7 +378,6 @@ const styles = {
     background: 'var(--text-muted)',
     animation: 'pulse 1.1s ease infinite',
   },
-
   suggestions: {
     padding: '0 24px 16px',
     flexShrink: 0,
@@ -374,11 +390,7 @@ const styles = {
     color: 'var(--text-muted)',
     marginBottom: '10px',
   },
-  chips: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px',
-  },
+  chips: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   chip: {
     background: 'var(--bg-elevated)',
     border: '1px solid var(--border)',
@@ -390,7 +402,6 @@ const styles = {
     transition: 'all var(--t-fast)',
     fontFamily: 'var(--font-body)',
   },
-
   noEntries: {
     display: 'flex',
     alignItems: 'center',
@@ -404,7 +415,6 @@ const styles = {
     color: 'var(--text-secondary)',
   },
   noEntriesIcon: { fontSize: '20px', flexShrink: 0 },
-
   errorBanner: {
     margin: '0 24px 12px',
     padding: '10px 14px',
@@ -417,7 +427,6 @@ const styles = {
     gap: '8px',
     flexShrink: 0,
   },
-
   inputRow: {
     display: 'flex',
     gap: '10px',

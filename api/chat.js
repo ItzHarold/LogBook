@@ -1,14 +1,50 @@
-// ─── Vercel Serverless Function: /api/chat ────────────────────
+// ─── Vercel Serverless Function: POST /api/chat ──────────────
 //
-// Runs entirely server-side on Vercel — the ANTHROPIC_API_KEY
-// environment variable is never sent to the browser.
+// Verifies the user is Pro via Supabase, then calls the Claude API.
+// The ANTHROPIC_API_KEY never reaches the browser.
 //
-// Set it in: Vercel Dashboard → Your Project → Settings →
-//            Environment Variables → Add → ANTHROPIC_API_KEY
+// Required env vars:
+//   ANTHROPIC_API_KEY        — console.anthropic.com
+//   VITE_SUPABASE_URL        — Supabase project URL
+//   SUPABASE_SERVICE_ROLE_KEY — Supabase service role key
+
+import { createClient } from '@supabase/supabase-js'
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
-const MODEL             = 'claude-opus-4-6'
+const MODEL             = 'claude-sonnet-4-6'
 const MAX_TOKENS        = 1024
+
+// ─── Supabase admin client ────────────────────────────────────
+
+function getAdminClient() {
+  return createClient(
+    process.env.VITE_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
+
+// ─── Verify the user's JWT and check is_pro ───────────────────
+
+async function getProStatus(authHeader) {
+  if (!authHeader?.startsWith('Bearer ')) return { userId: null, isPro: false }
+
+  const token    = authHeader.slice(7)
+  const supabase = getAdminClient()
+
+  // Verify the JWT and get the user
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+  if (error || !user) return { userId: null, isPro: false }
+
+  // Look up is_pro from the profiles table
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_pro')
+    .eq('id', user.id)
+    .single()
+
+  return { userId: user.id, isPro: profile?.is_pro ?? false }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -20,16 +56,12 @@ function formatDate(dateStr) {
   })
 }
 
-/**
- * Builds a rich system prompt with all user entries as context.
- * The more entries, the better Claude's answers.
- */
 function buildSystemPrompt(profile, entries) {
   const entryContext = entries.length === 0
     ? 'The user has not logged any entries yet.'
     : entries
-        .slice() // don't mutate
-        .sort((a, b) => new Date(b.date) - new Date(a.date)) // newest first
+        .slice()
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
         .map((e, i) => {
           const lines = [
             `--- Entry ${i + 1}: ${formatDate(e.date)} ---`,
@@ -64,28 +96,33 @@ Answer based only on the entries above. If the user asks about something not cov
 // ─── Handler ─────────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  // CORS headers — allows the Vite dev server and Vercel to call this
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
+  if (req.method === 'OPTIONS') return res.status(200).end()
+  if (req.method !== 'POST')   return res.status(405).json({ error: 'Method not allowed' })
+
+  // ── Pro check (server-side — cannot be bypassed from the browser) ──
+  const { userId, isPro } = await getProStatus(req.headers.authorization)
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Not authenticated.' })
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+  if (!isPro) {
+    return res.status(403).json({
+      error: 'AI Chat is a Pro feature. Upgrade to continue.',
+      code:  'NOT_PRO',
+    })
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
-    return res.status(500).json({
-      error: 'ANTHROPIC_API_KEY is not set. Add it in Vercel → Project Settings → Environment Variables.',
-    })
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not configured.' })
   }
 
   const { messages, entries, profile } = req.body
-
   if (!messages || !profile) {
     return res.status(400).json({ error: 'Missing required fields: messages, profile.' })
   }
@@ -109,14 +146,12 @@ export default async function handler(req, res) {
     const data = await response.json()
 
     if (!response.ok) {
-      const msg = data?.error?.message ?? `Anthropic API returned ${response.status}`
+      const msg = data?.error?.message ?? `Anthropic API error ${response.status}`
       return res.status(response.status).json({ error: msg })
     }
 
     const reply = data.content?.[0]?.text
-    if (!reply) {
-      return res.status(500).json({ error: 'Empty response from Claude.' })
-    }
+    if (!reply) return res.status(500).json({ error: 'Empty response from Claude.' })
 
     return res.status(200).json({ reply })
   } catch (err) {

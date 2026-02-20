@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useProfile } from './hooks/useProfile'
 import { useEntries } from './hooks/useEntries'
@@ -41,27 +41,31 @@ function LoadingScreen() {
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth()
-  const { profile, loading: profileLoading, saveProfile } = useProfile(user?.id)
+  const { profile, loading: profileLoading, saveProfile, refreshProfile } = useProfile(user?.id)
   const { entries, loading: entriesLoading, addEntry, deleteEntry } = useEntries(user?.id)
 
   const [page, setPage] = useState('dashboard')
 
-  // ── Auth + profile loading guard ──
-  if (authLoading || (user && profileLoading)) {
-    return <LoadingScreen />
-  }
+  // ── Detect Stripe redirect back ────────────────────────────
+  // Stripe sends users back to /?upgraded=true on success.
+  // We navigate to AI Chat and refresh the profile so is_pro
+  // updates immediately without requiring a manual page reload.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('upgraded') === 'true') {
+      // Clean up the URL
+      window.history.replaceState({}, '', window.location.pathname)
+      // Navigate to AI Chat and refresh profile
+      setPage('ai-chat')
+      refreshProfile()
+    }
+  }, [refreshProfile])
 
-  // ── Not logged in ──
-  if (!user) {
-    return <AuthPage />
-  }
+  // ── Guards ──
+  if (authLoading || (user && profileLoading)) return <LoadingScreen />
+  if (!user)    return <AuthPage />
+  if (!profile) return <Onboarding onComplete={saveProfile} />
 
-  // ── Logged in but no profile → onboarding ──
-  if (!profile) {
-    return <Onboarding onComplete={saveProfile} />
-  }
-
-  // ── Shared props passed to all pages ──
   const sharedProps = { profile, entries, entriesLoading, user }
 
   return (
@@ -76,7 +80,7 @@ export default function App() {
         <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} />
       )}
       {page === 'ai-chat' && (
-        <AIChat {...sharedProps} />
+        <AIChat {...sharedProps} refreshProfile={refreshProfile} />
       )}
     </Layout>
   )

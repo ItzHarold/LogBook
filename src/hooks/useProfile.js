@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 /**
- * Manages the user's profile (onboarding answers).
+ * Manages the user's profile (onboarding answers + Pro status).
  * `profile` is null until onboarding is complete — App.jsx uses this
  * to decide whether to show the onboarding flow.
  */
@@ -22,7 +22,7 @@ export function useProfile(userId) {
       .eq('id', userId)
       .single()
 
-    // PGRST116 = "no rows found", which is expected before onboarding
+    // PGRST116 = "no rows found", expected before onboarding
     if (error && error.code !== 'PGRST116') {
       console.error('[useProfile] fetch error:', error.message)
     }
@@ -52,5 +52,11 @@ export function useProfile(userId) {
     return data
   }
 
-  return { profile, loading, saveProfile }
+  /**
+   * Re-fetch the profile from Supabase.
+   * Called after a successful Stripe payment to pick up is_pro = true.
+   */
+  const refreshProfile = useCallback(() => fetchProfile(), [fetchProfile])
+
+  return { profile, loading, saveProfile, refreshProfile }
 }
