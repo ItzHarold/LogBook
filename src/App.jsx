@@ -107,14 +107,9 @@ export default function App() {
   }, [refreshProfile])
 
   // ── Onboarding completion ──
-  // Saves the user profile + creates the first logbook in one go
+  // Only saves the profile now — logbook is created manually via sidebar
   const handleOnboardingComplete = async (data) => {
     await saveProfile(data)
-    await addLogbook({
-      name:             data.logbook_name,
-      organization:     data.organization,
-      default_location: data.default_location,
-    })
   }
 
   const isLoading = authLoading || (user && (profileLoading || logbooksLoading))
@@ -122,17 +117,47 @@ export default function App() {
   if (!user)     return <AuthPage />
   if (!profile)  return <Onboarding onComplete={handleOnboardingComplete} />
 
-  // If profile exists but no logbooks yet (edge case after migration)
-  // wait for logbooks to finish loading before rendering the app
-  if (profile && !activeLogbook && !logbooksLoading) {
-    // Auto-create a logbook from the profile data (handles pre-migration users)
-    addLogbook({
-      name:             profile.logbook_name ?? 'My Logbook',
-      organization:     profile.organization  ?? '',
-      default_location: profile.default_location ?? '',
-    })
-    return <LoadingScreen />
-  }
+  // Zero logbooks — render the app normally, sidebar will show the create prompt
+
+  // When there are no logbooks, show a focused create-first-logbook screen
+  // instead of trying to render pages that depend on an active logbook
+  const NoLogbookScreen = () => (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: '60vh',
+    }}>
+      <div style={{
+        textAlign: 'center', maxWidth: '400px', padding: '0 24px',
+        animation: 'fadeIn 0.3s ease both',
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '20px' }}>📓</div>
+        <h2 style={{
+          fontFamily: 'var(--font-heading)', fontSize: '26px',
+          fontWeight: 600, color: 'var(--text-primary)',
+          letterSpacing: '-0.01em', marginBottom: '12px',
+        }}>
+          Create your first logbook
+        </h2>
+        <p style={{
+          fontSize: '15px', color: 'var(--text-secondary)',
+          lineHeight: 1.6, marginBottom: '28px',
+        }}>
+          A logbook is where your entries live. You can have multiple — one per
+          job, internship, or project.
+        </p>
+        <button
+          className="btn btn-primary"
+          style={{ fontSize: '15px', padding: '12px 28px' }}
+          onClick={() => {
+            // Trigger the New logbook modal via a custom event the sidebar listens to
+            window.dispatchEvent(new CustomEvent('open-create-logbook'))
+          }}
+        >
+          + Create a logbook
+        </button>
+      </div>
+    </div>
+  )
 
   const sharedProps = {
     profile:        mergedProfile,
@@ -149,17 +174,21 @@ export default function App() {
       profile={mergedProfile} signOut={signOut}
       {...logbookProps}
     >
-      {page === 'dashboard' && (
-        <Dashboard {...sharedProps} setPage={setPage} />
-      )}
-      {page === 'new-entry' && (
-        <NewEntry {...sharedProps} addEntry={addEntry} setPage={setPage} gDrive={gDrive} activeFields={activeFields} />
-      )}
-      {page === 'history' && (
-        <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} gDrive={gDrive} activeFields={activeFields} />
-      )}
-      {page === 'ai-chat' && (
-        <AIChat {...sharedProps} refreshProfile={refreshProfile} />
+      {!activeLogbook ? <NoLogbookScreen /> : (
+        <>
+          {page === 'dashboard' && (
+            <Dashboard {...sharedProps} setPage={setPage} />
+          )}
+          {page === 'new-entry' && (
+            <NewEntry {...sharedProps} addEntry={addEntry} setPage={setPage} gDrive={gDrive} activeFields={activeFields} />
+          )}
+          {page === 'history' && (
+            <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} gDrive={gDrive} activeFields={activeFields} />
+          )}
+          {page === 'ai-chat' && (
+            <AIChat {...sharedProps} refreshProfile={refreshProfile} />
+          )}
+        </>
       )}
     </Layout>
   )

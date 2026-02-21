@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ProfilePanel from './ProfilePanel'
 import LogbookModal from '../Logbooks/LogbookModal'
 
@@ -14,8 +14,15 @@ export default function Sidebar({
   logbooks, activeLogbook, setActiveLogbookId, addLogbook, deleteLogbook,
 }) {
   const [profileOpen, setProfileOpen]   = useState(false)
-  const [modal, setModal]               = useState(null) // null | { mode: 'create' } | { mode: 'delete', target }
+  const [modal, setModal]               = useState(null)
   const [lbOpen, setLbOpen]             = useState(true)
+
+  // Allow the no-logbook empty state screen to open this modal
+  useEffect(() => {
+    const handler = () => setModal({ mode: 'create' })
+    window.addEventListener('open-create-logbook', handler)
+    return () => window.removeEventListener('open-create-logbook', handler)
+  }, [])
 
   return (
     <>
@@ -32,6 +39,10 @@ export default function Sidebar({
             <span style={styles.sectionLabel}>Your logbooks</span>
             <span style={{ ...styles.sectionChevron, transform: lbOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
           </button>
+
+          {lbOpen && logbooks.length === 0 && (
+            <p style={styles.lbEmpty}>No logbooks yet.</p>
+          )}
 
           {lbOpen && logbooks.map((lb) => {
             const isActive = lb.id === activeLogbook?.id
@@ -248,6 +259,12 @@ const styles = {
     borderRadius: 'var(--radius-sm)',
     transition: 'opacity var(--t-fast)',
     // shown on hover via CSS class below
+  },
+  lbEmpty: {
+    fontSize: '12px',
+    color: 'var(--text-muted)',
+    padding: '6px 12px 8px',
+    fontStyle: 'italic',
   },
   newLbBtn: {
     display: 'flex',

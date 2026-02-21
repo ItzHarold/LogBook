@@ -30,9 +30,10 @@ export default function ProfilePanel({ profile, signOut, onClose }) {
   }
 
   const content = (
-    <>
-      <div style={styles.backdrop} onClick={onClose} />
-
+    <div
+      style={styles.scrollContainer}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
       <div style={styles.modal}>
         {/* Header */}
         <div style={styles.header}>
@@ -118,31 +119,33 @@ export default function ProfilePanel({ profile, signOut, onClose }) {
           </div>
         )}
       </div>
-    </>
+    </div>
   )
 
   return createPortal(content, document.body)
 }
 
 const styles = {
-  backdrop: {
+  scrollContainer: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.55)',
     zIndex: 1000,
+    background: 'rgba(0,0,0,0.65)',
+    overflowY: 'auto',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px 16px',
     animation: 'fadeIn 0.15s ease both',
   },
   modal: {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 'min(360px, calc(100vw - 32px))',
+    width: '100%',
+    maxWidth: '360px',
     background: 'var(--bg-elevated)',
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-xl)',
     padding: '24px',
-    zIndex: 1001,
+    flexShrink: 0,
     animation: 'slideUp 0.2s cubic-bezier(0.32,0.72,0,1) both',
     boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
   },
