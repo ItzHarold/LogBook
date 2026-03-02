@@ -108,6 +108,8 @@ export default function AIChat({ profile, entries, user }) {
       try {
         data = await res.json()
       } catch {
+        const text = await res.text().catch(() => '(unreadable)')
+        console.error('[AIChat] Non-JSON response:', res.status, text)
         throw new Error(`Server error (${res.status}). Please try again.`)
       }
 
