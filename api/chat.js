@@ -56,7 +56,7 @@ function formatDate(dateStr) {
   })
 }
 
-function buildSystemPrompt(profile, entries) {
+function buildSystemPrompt(profile, entries, activeFields = []) {
   const entryContext = entries.length === 0
     ? 'The user has not logged any entries yet.'
     : entries
@@ -67,11 +67,26 @@ function buildSystemPrompt(profile, entries) {
             `--- Entry ${i + 1}: ${formatDate(e.date)} ---`,
             `Hours: ${e.hours}h | Energy: ${ENERGY_LABEL[e.energy] ?? e.energy} | Location: ${e.location}`,
           ]
-          if (e.worked_on) lines.push(`What I worked on:\n${e.worked_on}`)
-          if (e.learned)   lines.push(`What I learned:\n${e.learned}`)
-          if (e.blockers)  lines.push(`Blockers & challenges:\n${e.blockers}`)
-          if (e.ideas)     lines.push(`Ideas & notes:\n${e.ideas}`)
-          if (e.tomorrow)  lines.push(`Tomorrow's plan:\n${e.tomorrow}`)
+          if (e.start_time && e.end_time) {
+            lines[1] += ` | Time: ${e.start_time} – ${e.end_time}`
+          }
+          // Include all custom fields using their human-readable labels
+          const custom = e.custom_data ?? {}
+          if (activeFields.length > 0) {
+            activeFields.forEach((field) => {
+              const val = custom[field.field_key]
+              if (val !== undefined && val !== null && val !== '') {
+                lines.push(`${field.label}:\n${val}`)
+              }
+            })
+          } else {
+            // Fallback: dump raw custom_data keys if no field definitions provided
+            Object.entries(custom).forEach(([key, val]) => {
+              if (val !== undefined && val !== null && val !== '') {
+                lines.push(`${key}:\n${val}`)
+              }
+            })
+          }
           return lines.join('\n')
         })
         .join('\n\n')
@@ -122,7 +137,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not configured.' })
   }
 
-  const { messages, entries, profile } = req.body
+  const { messages, entries, profile, activeFields } = req.body
   if (!messages || !profile) {
     return res.status(400).json({ error: 'Missing required fields: messages, profile.' })
   }
@@ -138,7 +153,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model:      MODEL,
         max_tokens: MAX_TOKENS,
-        system:     buildSystemPrompt(profile, entries ?? []),
+        system:     buildSystemPrompt(profile, entries ?? [], activeFields ?? []),
         messages,
       }),
     })

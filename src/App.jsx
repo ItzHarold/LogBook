@@ -186,7 +186,7 @@ export default function App() {
             <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} gDrive={gDrive} activeFields={activeFields} />
           )}
           {page === 'ai-chat' && (
-            <AIChat {...sharedProps} refreshProfile={refreshProfile} />
+            <AIChat {...sharedProps} activeFields={activeFields} refreshProfile={refreshProfile} />
           )}
         </>
       )}

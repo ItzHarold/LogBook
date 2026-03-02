@@ -47,7 +47,7 @@ function Message({ msg }) {
 
 // ─── Main Component ───────────────────────────────────────────
 
-export default function AIChat({ profile, entries, user }) {
+export default function AIChat({ profile, entries, user, activeFields = [] }) {
   const [messages, setMessages] = useState([])
   const [input, setInput]       = useState('')
   const [loading, setLoading]   = useState(false)
@@ -101,7 +101,7 @@ export default function AIChat({ profile, entries, user }) {
           'Content-Type':  'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ messages: history, entries, profile }),
+        body: JSON.stringify({ messages: history, entries, profile, activeFields }),
       })
 
       let data
