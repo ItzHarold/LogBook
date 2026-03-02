@@ -71,53 +71,54 @@ export default function ProfilePanel({ profile, signOut, onClose }) {
             Privacy Policy
           </a>
 
-          <button style={styles.actionBtn} onClick={() => { onClose(); signOut() }}>
-            <span style={styles.actionIcon}>↩</span>
-            Sign out
-          </button>
+          {/* Delete account */}
+          {!showDeleteConfirm ? (
+            <button
+              style={{ ...styles.actionBtn, color: 'var(--red)' }}
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <span style={{ ...styles.actionIcon, background: 'var(--red-dim)', border: '1px solid rgba(248,113,113,0.2)' }}>🗑</span>
+              Delete account
+            </button>
+          ) : (
+            <div style={styles.deleteConfirm}>
+              <p style={styles.deleteWarning}>
+                Permanently deletes all your logbooks, entries, and cancels any active subscription. Cannot be undone.
+              </p>
+              {deleteError && (
+                <p style={{ fontSize: '12px', color: 'var(--red)', marginBottom: '10px' }}>⚠ {deleteError}</p>
+              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  className="btn btn-danger"
+                  style={{ flex: 1, fontSize: '12px' }}
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                >
+                  {deleting
+                    ? <div className="spinner" style={{ width: '13px', height: '13px', borderTopColor: 'var(--red)' }} />
+                    : 'Yes, delete everything'}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ flex: 1, fontSize: '12px' }}
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteError('') }}
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={styles.divider} />
 
-        {/* Delete account */}
-        {!showDeleteConfirm ? (
-          <button
-            style={{ ...styles.actionBtn, color: 'var(--red)' }}
-            onClick={() => setShowDeleteConfirm(true)}
-          >
-            <span style={{ ...styles.actionIcon, background: 'var(--red-dim)', border: '1px solid rgba(248,113,113,0.2)' }}>🗑</span>
-            Delete account
-          </button>
-        ) : (
-          <div style={styles.deleteConfirm}>
-            <p style={styles.deleteWarning}>
-              Permanently deletes all your logbooks, entries, and cancels any active subscription. Cannot be undone.
-            </p>
-            {deleteError && (
-              <p style={{ fontSize: '12px', color: 'var(--red)', marginBottom: '10px' }}>⚠ {deleteError}</p>
-            )}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                className="btn btn-danger"
-                style={{ flex: 1, fontSize: '12px' }}
-                onClick={handleDeleteAccount}
-                disabled={deleting}
-              >
-                {deleting
-                  ? <div className="spinner" style={{ width: '13px', height: '13px', borderTopColor: 'var(--red)' }} />
-                  : 'Yes, delete everything'}
-              </button>
-              <button
-                className="btn btn-secondary"
-                style={{ flex: 1, fontSize: '12px' }}
-                onClick={() => { setShowDeleteConfirm(false); setDeleteError('') }}
-                disabled={deleting}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Sign out */}
+        <button style={styles.actionBtn} onClick={() => { onClose(); signOut() }}>
+          <span style={styles.actionIcon}>↩</span>
+          Sign out
+        </button>
       </div>
     </div>
   )
