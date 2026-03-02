@@ -45,8 +45,13 @@ function drawSection(doc, label, content, y, pageH, margin, contentW) {
   if (!displayContent.trim()) return y
 
   const LABEL_H = 5, LINE_H = 5.5, PAD_V = 10, BAR_W = 3
-  const INNER_W = contentW - BAR_W - 8
-  const lines   = wrappedLines(doc, displayContent, INNER_W)
+  const INNER_W = contentW - BAR_W - 16  // 8px left + 8px right padding
+
+  // Set content font BEFORE splitting so splitTextToSize measures at the correct size
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+
+  const lines = wrappedLines(doc, displayContent, INNER_W)
   if (!lines.length) return y
 
   const blockH = PAD_V + LABEL_H + 4 + lines.length * LINE_H + PAD_V
@@ -61,7 +66,7 @@ function drawSection(doc, label, content, y, pageH, margin, contentW) {
   setTextColor(doc, C.TEXT_MUTED)
   doc.text(label.toUpperCase(), margin + BAR_W + 8, y + PAD_V)
 
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(10)
+  doc.setFont('helvetica', 'normal')
   setTextColor(doc, C.TEXT_PRIMARY)
   lines.forEach((line, i) => {
     doc.text(line, margin + BAR_W + 8, y + PAD_V + LABEL_H + 4 + i * LINE_H)
