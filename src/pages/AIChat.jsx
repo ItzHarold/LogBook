@@ -104,7 +104,12 @@ export default function AIChat({ profile, entries, user }) {
         body: JSON.stringify({ messages: history, entries, profile }),
       })
 
-      const data = await res.json()
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error(`Server error (${res.status}). Please try again.`)
+      }
 
       // Server returned NOT_PRO — shouldn't happen if wall is shown,
       // but handle gracefully just in case
