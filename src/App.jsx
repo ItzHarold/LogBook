@@ -4,9 +4,10 @@ import { useAuth } from './hooks/useAuth'
 import { useProfile } from './hooks/useProfile'
 import { useLogbooks } from './hooks/useLogbooks'
 import { useEntries } from './hooks/useEntries'
-import { useGDrive } from './hooks/useGDrive'
+
 
 import AuthPage from './components/Auth/AuthPage'
+import LandingPage from './pages/LandingPage'
 import Onboarding from './components/Onboarding/Onboarding'
 import Layout from './components/Layout/Layout'
 import Dashboard from './pages/Dashboard'
@@ -53,8 +54,8 @@ export default function App() {
     activeLogbook?.id,
   )
 
-  const gDrive = useGDrive(profile, refreshProfile)
-  const [page, setPage] = useState('dashboard')
+  const [page, setPage]       = useState('dashboard')
+  const [showAuth, setShowAuth] = useState(false)
 
   // Merge activeLogbook fields into profile so all pages keep working
   const mergedProfile = (profile && activeLogbook)
@@ -114,7 +115,9 @@ export default function App() {
 
   const isLoading = authLoading || (user && (profileLoading || logbooksLoading))
   if (isLoading) return <LoadingScreen />
-  if (!user)     return <AuthPage />
+  if (!user)     return showAuth
+    ? <AuthPage />
+    : <LandingPage onGetStarted={() => setShowAuth(true)} />
   if (!profile)  return <Onboarding onComplete={handleOnboardingComplete} />
 
   // Zero logbooks — render the app normally, sidebar will show the create prompt
@@ -180,10 +183,10 @@ export default function App() {
             <Dashboard {...sharedProps} setPage={setPage} />
           )}
           {page === 'new-entry' && (
-            <NewEntry {...sharedProps} addEntry={addEntry} setPage={setPage} gDrive={gDrive} activeFields={activeFields} />
+            <NewEntry {...sharedProps} addEntry={addEntry} setPage={setPage} activeFields={activeFields} />
           )}
           {page === 'history' && (
-            <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} gDrive={gDrive} activeFields={activeFields} />
+            <History {...sharedProps} deleteEntry={deleteEntry} setPage={setPage} activeFields={activeFields} />
           )}
           {page === 'ai-chat' && (
             <AIChat {...sharedProps} activeFields={activeFields} refreshProfile={refreshProfile} />

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { generatePDF } from '../lib/generatePDF'
 import { computeHours, formatDuration } from '../lib/timeUtils'
-import GDriveConnect from '../components/GDrive/GDriveConnect'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -74,7 +73,7 @@ function DynamicField({ field, value, onChange, error }) {
   )
 }
 
-export default function NewEntry({ profile, addEntry, setPage, gDrive, activeFields = [] }) {
+export default function NewEntry({ profile, addEntry, setPage, activeFields = [] }) {
   const blankCore = () => ({
     date:       today(),
     start_time: '',
@@ -94,7 +93,6 @@ export default function NewEntry({ profile, addEntry, setPage, gDrive, activeFie
   const [errors, setErrors]     = useState({})
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(null)
-  const [gDriveOk, setGDriveOk] = useState('')
 
   // Auto-fill start/end with the exact same time on first render
   useEffect(() => {
@@ -144,21 +142,13 @@ export default function NewEntry({ profile, addEntry, setPage, gDrive, activeFie
         location:    core.location.trim(),
         custom_data: custom,
       })
-      setSaved(entry)
       generatePDF(entry, profile, activeFields)
+      setSaved(entry)
     } catch (err) {
       setErrors({ submit: err.message || 'Failed to save entry. Please try again.' })
     } finally {
       setSaving(false)
     }
-  }
-
-  const handleGDrive = async () => {
-    if (!saved) return
-    gDrive.clearUploadError?.()
-    setGDriveOk('')
-    const ok = await gDrive.uploadPDF(saved, profile, activeFields)
-    if (ok) setGDriveOk('Saved to your Google Drive LogBook folder ✓')
   }
 
   const handleClear = () => {
@@ -189,28 +179,6 @@ export default function NewEntry({ profile, addEntry, setPage, gDrive, activeFie
             <div style={styles.pdfNote}>
               <span style={{ color: 'var(--green)', marginRight: '6px' }}>✓</span>
               PDF downloaded automatically.
-            </div>
-            <div style={styles.gDriveSection}>
-              <p style={styles.gDriveLabel}>Save to Google Drive</p>
-              {!gDrive.isConnected ? (
-                <div>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-                    Connect Google Drive to save PDFs automatically.
-                  </p>
-                  <GDriveConnect isConnected={false} connect={gDrive.connect} disconnect={gDrive.disconnect} />
-                </div>
-              ) : gDriveOk ? (
-                <div style={styles.gDriveSuccessBanner}><span>☁</span> {gDriveOk}</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <button className="btn btn-secondary" style={{ width: '100%' }} onClick={handleGDrive} disabled={gDrive.uploading}>
-                    {gDrive.uploading
-                      ? <><div className="spinner" style={{ borderTopColor: 'var(--text-primary)' }} /> Uploading…</>
-                      : '☁ Save to Google Drive'}
-                  </button>
-                  {gDrive.uploadError && <p style={{ fontSize: '12px', color: 'var(--red)' }}>⚠ {gDrive.uploadError}</p>}
-                </div>
-              )}
             </div>
             <div style={styles.successActions}>
               <button className="btn btn-secondary" onClick={handleClear}>Log another day</button>
