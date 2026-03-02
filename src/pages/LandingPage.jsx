@@ -38,12 +38,12 @@ function AppMockup() {
       {/* Field */}
       <div style={mock.field}>
         <div style={mock.fieldLabel}>What I worked on</div>
-        <div style={mock.fieldValue}>Deployed the new auth flow and fixed the session expiry bug. Reviewed two PRs from the team.</div>
+        <div style={mock.fieldValue}>Finalised the Q2 report, had a catch-up with the team, and followed up on three client emails.</div>
       </div>
 
       <div style={mock.field}>
         <div style={mock.fieldLabel}>What I learned</div>
-        <div style={mock.fieldValue}>JWT refresh tokens behave differently across browsers when third-party cookies are blocked.</div>
+        <div style={mock.fieldValue}>Setting a clear agenda before meetings cuts them in half — tried it today and it worked.</div>
       </div>
 
       {/* AI bubble */}
@@ -87,19 +87,15 @@ const mock = {
 // ─── Feature card ──────────────────────────────────────────────
 function FeatureCard({ icon, title, desc, pro, delay }) {
   const [ref, inView] = useInView()
-  const [hovered, setHovered] = useState(false)
   return (
     <div
       ref={ref}
+      className="feature-card"
       style={{
-        ...feat.card,
-        ...(hovered ? feat.cardHover : {}),
         opacity: inView ? 1 : 0,
         transform: inView ? 'translateY(0)' : 'translateY(24px)',
-        transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms, background 0.15s ease, border-color 0.15s ease`,
+        transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`,
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       <div style={feat.iconWrap}>{icon}</div>
       <div style={feat.title}>
@@ -112,8 +108,6 @@ function FeatureCard({ icon, title, desc, pro, delay }) {
 }
 
 const feat = {
-  card: { background: '#1c1c25', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '24px', cursor: 'default' },
-  cardHover: { background: '#20202a', borderColor: 'rgba(240,192,96,0.2)' },
   iconWrap: { fontSize: '22px', marginBottom: '14px' },
   title: { fontSize: '16px', fontWeight: 600, color: '#f0ede8', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' },
   proBadge: { fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', background: 'rgba(240,192,96,0.12)', color: '#f0c060', border: '1px solid rgba(240,192,96,0.25)', borderRadius: '99px', padding: '2px 8px' },
@@ -240,7 +234,18 @@ export default function LandingPage({ onGetStarted }) {
           transition: color 0.15s ease;
         }
         .landing-nav-link:hover { color: #f0ede8; }
-        .landing-feature-card:hover { border-color: rgba(240,192,96,0.2) !important; }
+        .feature-card {
+          background: #1c1c25;
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 14px;
+          padding: 24px;
+          cursor: default;
+          transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .feature-card:hover {
+          background: #20202a;
+          border-color: rgba(240,192,96,0.2);
+        }
       `}</style>
 
       {/* ─── Navbar ─── */}
@@ -348,7 +353,7 @@ export default function LandingPage({ onGetStarted }) {
             <FeatureCard delay={0}   icon="📝" title="Daily Work Logs"  desc="Log your hours, energy level, location, and what you worked on each day. Fully customisable fields." />
             <FeatureCard delay={80}  icon="📄" title="PDF Export"       desc="Every entry generates a beautiful PDF automatically, ready to share with managers or keep for your records." />
             <FeatureCard delay={160} icon="✦"  title="AI Insights" pro  desc="Ask your work journal anything. Spot energy patterns, recurring blockers, and skill growth over time." />
-            <FeatureCard delay={240} icon="☁️" title="OneDrive Sync"    desc="Save your PDFs directly to OneDrive automatically. Your records, always accessible." />
+            <FeatureCard delay={240} icon="📚" title="Multiple Logbooks" desc="Keep separate logbooks for different jobs, internships, or projects — all in one place." />
           </div>
         </div>
       </section>
@@ -419,7 +424,7 @@ export default function LandingPage({ onGetStarted }) {
               ))}
             </div>
             <button className="btn btn-primary" style={{ fontSize: '15px', padding: '12px 24px', height: 'auto' }} onClick={onGetStarted}>
-              Try it free →
+              Upgrade to Pro — €4.99/mo →
             </button>
           </div>
         </div>
@@ -444,7 +449,6 @@ export default function LandingPage({ onGetStarted }) {
                 'Unlimited entries',
                 'PDF export for every entry',
                 'Multiple logbooks',
-                'OneDrive sync',
                 'Custom fields',
               ]}
               cta="Get started free"
