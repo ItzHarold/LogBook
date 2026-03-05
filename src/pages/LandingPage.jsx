@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 // ─── Scroll animation hook ─────────────────────────────────────
 function useInView() {
@@ -147,6 +147,7 @@ function PricingCard({ tier, price, perMonth, features, cta, highlight, onCta, d
   return (
     <div
       ref={ref}
+      className="pricing-card-wrap"
       style={{
         ...pricing.card,
         ...(highlight ? pricing.cardHighlight : {}),
@@ -196,25 +197,30 @@ const pricing = {
 
 // ─── Main component ────────────────────────────────────────────
 export default function LandingPage({ onGetStarted }) {
-  const [scrolled, setScrolled] = useState(false)
-  const [heroRef, heroInView]   = useInView()
-  const [aiRef, aiInView]       = useInView()
-  const [ctaRef, ctaInView]     = useInView()
+  const [scrolled, setScrolled]   = useState(false)
+  const [menuOpen, setMenuOpen]   = useState(false)
+  const [heroRef, heroInView]     = useInView()
+  const [aiRef, aiInView]         = useInView()
+  const [ctaRef, ctaInView]       = useInView()
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40)
+    const onScroll = () => {
+      setScrolled(window.scrollY > 40)
+      if (window.scrollY > 40) setMenuOpen(false)
+    }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const scrollTo = (id) => {
+  const scrollTo = useCallback((id) => {
+    setMenuOpen(false)
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-  }
+  }, [])
 
   return (
     <div style={{ background: '#0f0f13', minHeight: '100vh', color: '#f0ede8', fontFamily: "'DM Sans', system-ui, sans-serif" }}>
 
-      {/* ── Keyframes injected once ── */}
+      {/* ── Keyframes + responsive CSS injected once ── */}
       <style>{`
         @keyframes floatCard {
           0%, 100% { transform: translateY(0px); }
@@ -228,6 +234,7 @@ export default function LandingPage({ onGetStarted }) {
           0%, 100% { opacity: 0.5; }
           50% { opacity: 1; }
         }
+        * { box-sizing: border-box; }
         .landing-nav-link {
           background: none; border: none; color: #8a8599; font-size: 14px;
           cursor: pointer; font-family: inherit; padding: 6px 4px;
@@ -246,15 +253,109 @@ export default function LandingPage({ onGetStarted }) {
           background: #20202a;
           border-color: rgba(240,192,96,0.2);
         }
+
+        /* ── Hamburger button ── */
+        .hamburger-btn {
+          display: none;
+          background: none; border: none;
+          color: #f0ede8; font-size: 22px;
+          cursor: pointer; padding: 4px 8px;
+          line-height: 1; flex-shrink: 0;
+        }
+
+        /* ── Mobile nav dropdown ── */
+        .mobile-nav-menu {
+          display: none;
+          position: fixed;
+          top: 64px; left: 0; right: 0;
+          background: rgba(15,15,19,0.97);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          padding: 8px 24px 24px;
+          flex-direction: column;
+          gap: 0;
+          z-index: 99;
+        }
+        .mobile-nav-menu.open { display: flex; }
+        .mobile-nav-menu .landing-nav-link {
+          font-size: 17px;
+          padding: 14px 0;
+          text-align: left;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          width: 100%;
+        }
+        .mobile-nav-menu .landing-nav-link:last-child { border-bottom: none; }
+        .mobile-nav-menu .mobile-menu-cta {
+          margin-top: 16px;
+          display: flex;
+          gap: 10px;
+        }
+        .mobile-nav-menu .mobile-menu-cta button {
+          flex: 1;
+          font-size: 15px;
+          height: 44px;
+        }
+
+        /* ── Responsive layouts ── */
+        @media (max-width: 768px) {
+          .hamburger-btn { display: block; }
+          .nav-links-desktop { display: none !important; }
+          .nav-sign-in { display: none !important; }
+          .nav-get-started { display: none !important; }
+
+          .hero-section {
+            padding: 90px 20px 56px !important;
+            min-height: auto !important;
+          }
+          .hero-grid {
+            grid-template-columns: 1fr !important;
+            gap: 36px !important;
+          }
+          .hero-mockup-col {
+            display: flex;
+            justify-content: center;
+          }
+
+          .section-pd { padding: 64px 20px !important; }
+
+          .steps-grid {
+            grid-template-columns: 1fr !important;
+            gap: 28px !important;
+          }
+          .steps-connector { display: none !important; }
+          .step-item { padding: 0 !important; }
+
+          .ai-grid {
+            grid-template-columns: 1fr !important;
+            gap: 36px !important;
+          }
+          .ai-text-col { order: -1; }
+
+          .pricing-wrap {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .pricing-card-wrap {
+            min-width: unset !important;
+            max-width: 100% !important;
+            width: 100% !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .hero-section { padding: 80px 16px 48px !important; }
+          .section-pd { padding: 52px 16px !important; }
+        }
       `}</style>
 
       {/* ─── Navbar ─── */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         padding: '0 24px',
-        background: scrolled ? 'rgba(15,15,19,0.92)' : 'transparent',
-        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : '1px solid transparent',
-        backdropFilter: scrolled ? 'blur(12px)' : 'none',
+        background: scrolled || menuOpen ? 'rgba(15,15,19,0.96)' : 'transparent',
+        borderBottom: scrolled || menuOpen ? '1px solid rgba(255,255,255,0.06)' : '1px solid transparent',
+        backdropFilter: scrolled || menuOpen ? 'blur(12px)' : 'none',
         transition: 'background 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease',
       }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -267,32 +368,50 @@ export default function LandingPage({ onGetStarted }) {
                 <button key={id} className="landing-nav-link" onClick={() => scrollTo(id)}>{label}</button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <button
-                className="btn btn-secondary"
+                className="btn btn-secondary nav-sign-in"
                 style={{ fontSize: '14px', padding: '8px 18px', height: '36px' }}
                 onClick={onGetStarted}
               >
                 Sign in
               </button>
               <button
-                className="btn btn-primary"
+                className="btn btn-primary nav-get-started"
                 style={{ fontSize: '14px', padding: '8px 18px', height: '36px' }}
                 onClick={onGetStarted}
               >
                 Get started
+              </button>
+              <button
+                className="hamburger-btn"
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                onClick={() => setMenuOpen(o => !o)}
+              >
+                {menuOpen ? '✕' : '☰'}
               </button>
             </div>
           </div>
         </div>
       </nav>
 
+      {/* ─── Mobile nav menu ─── */}
+      <div className={`mobile-nav-menu${menuOpen ? ' open' : ''}`}>
+        {[['Features', 'features'], ['How it works', 'how'], ['Pricing', 'pricing']].map(([label, id]) => (
+          <button key={id} className="landing-nav-link" onClick={() => scrollTo(id)}>{label}</button>
+        ))}
+        <div className="mobile-menu-cta">
+          <button className="btn btn-secondary" onClick={() => { setMenuOpen(false); onGetStarted() }}>Sign in</button>
+          <button className="btn btn-primary"    onClick={() => { setMenuOpen(false); onGetStarted() }}>Get started</button>
+        </div>
+      </div>
+
       {/* ─── Hero ─── */}
-      <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '100px 24px 80px', position: 'relative', overflow: 'hidden' }}>
+      <section className="hero-section" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '100px 24px 80px', position: 'relative', overflow: 'hidden' }}>
         {/* Background glow */}
         <div style={{ position: 'absolute', width: '800px', height: '800px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,192,96,0.055) 0%, transparent 65%)', top: '50%', left: '40%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', animation: 'gradientShift 5s ease-in-out infinite' }} />
 
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center', width: '100%' }}>
+        <div className="hero-grid" style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center', width: '100%' }}>
 
           {/* Left */}
           <div ref={heroRef} style={{ animation: 'fadeInUp 0.6s ease both' }}>
@@ -301,7 +420,7 @@ export default function LandingPage({ onGetStarted }) {
               Work journal for professionals
             </div>
 
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(40px, 5vw, 62px)', fontWeight: 700, color: '#f0ede8', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: '20px' }}>
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(36px, 5vw, 62px)', fontWeight: 700, color: '#f0ede8', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: '20px' }}>
               Your work,<br />
               <span style={{ color: '#f0c060' }}>documented.</span>
             </h1>
@@ -333,14 +452,14 @@ export default function LandingPage({ onGetStarted }) {
           </div>
 
           {/* Right — mockup */}
-          <div style={{ display: 'flex', justifyContent: 'center', animation: 'fadeInUp 0.6s ease 0.15s both' }}>
+          <div className="hero-mockup-col" style={{ display: 'flex', justifyContent: 'center', animation: 'fadeInUp 0.6s ease 0.15s both' }}>
             <AppMockup />
           </div>
         </div>
       </section>
 
       {/* ─── Features ─── */}
-      <section id="features" style={{ padding: '100px 24px' }}>
+      <section id="features" className="section-pd" style={{ padding: '100px 24px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '56px' }}>
             <p style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#f0c060', marginBottom: '12px' }}>Features</p>
@@ -359,7 +478,7 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* ─── How it works ─── */}
-      <section id="how" style={{ padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section id="how" className="section-pd" style={{ padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <p style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#f0c060', marginBottom: '12px' }}>How it works</p>
@@ -368,9 +487,9 @@ export default function LandingPage({ onGetStarted }) {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px', position: 'relative' }}>
+          <div className="steps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px', position: 'relative' }}>
             {/* Connector lines */}
-            <div style={{ position: 'absolute', top: '22px', left: 'calc(16.5% + 22px)', right: 'calc(16.5% + 22px)', height: '1px', background: 'linear-gradient(to right, rgba(240,192,96,0.2), rgba(240,192,96,0.2))', pointerEvents: 'none' }} />
+            <div className="steps-connector" style={{ position: 'absolute', top: '22px', left: 'calc(16.5% + 22px)', right: 'calc(16.5% + 22px)', height: '1px', background: 'linear-gradient(to right, rgba(240,192,96,0.2), rgba(240,192,96,0.2))', pointerEvents: 'none' }} />
             <Step delay={0}   number="1" title="Create your logbook"   desc="Set up in 30 seconds. Choose your fields, name your logbook, and you're ready to go." />
             <Step delay={100} number="2" title="Log your work day"     desc="Fill in each day's entry in 2 minutes — time, energy, highlights, and blockers." />
             <Step delay={200} number="3" title="Review and reflect"    desc="Browse your history, export PDFs, and let the AI surface what matters most." />
@@ -379,10 +498,10 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* ─── AI section ─── */}
-      <section ref={aiRef} style={{ padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
+      <section ref={aiRef} className="section-pd" style={{ padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 100%, rgba(240,192,96,0.06) 0%, transparent 60%)', pointerEvents: 'none' }} />
 
-        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center', position: 'relative' }}>
+        <div className="ai-grid" style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center', position: 'relative' }}>
 
           {/* AI chat mockup */}
           <div style={{ opacity: aiInView ? 1 : 0, transform: aiInView ? 'translateY(0)' : 'translateY(24px)', transition: 'all 0.6s ease' }}>
@@ -406,7 +525,7 @@ export default function LandingPage({ onGetStarted }) {
           </div>
 
           {/* Text */}
-          <div style={{ opacity: aiInView ? 1 : 0, transform: aiInView ? 'translateY(0)' : 'translateY(24px)', transition: 'all 0.6s ease 0.15s' }}>
+          <div className="ai-text-col" style={{ opacity: aiInView ? 1 : 0, transform: aiInView ? 'translateY(0)' : 'translateY(24px)', transition: 'all 0.6s ease 0.15s' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(240,192,96,0.1)', border: '1px solid rgba(240,192,96,0.2)', borderRadius: '99px', padding: '5px 14px', fontSize: '11px', fontWeight: 600, color: '#f0c060', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '20px' }}>
               ✦ Pro feature
             </div>
@@ -431,7 +550,7 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* ─── Pricing ─── */}
-      <section id="pricing" style={{ padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section id="pricing" className="section-pd" style={{ padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '780px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '56px' }}>
             <p style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#f0c060', marginBottom: '12px' }}>Pricing</p>
@@ -440,7 +559,7 @@ export default function LandingPage({ onGetStarted }) {
             </h2>
           </div>
 
-          <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="pricing-wrap" style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <PricingCard
               delay={0}
               tier="Free"
@@ -475,7 +594,7 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* ─── Final CTA ─── */}
-      <section style={{ padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
+      <section className="section-pd" style={{ padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, rgba(240,192,96,0.05) 0%, transparent 65%)', pointerEvents: 'none' }} />
         <div
           ref={ctaRef}
